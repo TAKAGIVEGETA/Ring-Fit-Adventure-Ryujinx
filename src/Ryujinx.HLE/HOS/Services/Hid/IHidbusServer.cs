@@ -81,7 +81,7 @@ namespace Ryujinx.HLE.HOS.Services.Hid
             context.RequestData.BaseStream.Position += 7; // Padding
             BusHandle busHandle = context.RequestData.ReadStruct<BusHandle>();
 
-            Logger.Debug?.Print(LogClass.ServiceHid, $"EnableExternalDevice: isEnabled={isEnabled}, internalIndex={busHandle.InternalIndex}");
+            Logger.Info?.Print(LogClass.ServiceHid, $"EnableExternalDevice: isEnabled={isEnabled}, internalIndex={busHandle.InternalIndex}");
 
             return context.Device.Hid.HidBus.EnableExternalDevice(busHandle, isEnabled);
         }
@@ -111,6 +111,8 @@ namespace Ryujinx.HLE.HOS.Services.Hid
 
             context.Memory.Read(position, data);
 
+            Logger.Info?.Print(LogClass.ServiceHid, $"SendCommandAsync: {Convert.ToHexString(data)}");
+
             return context.Device.Hid.HidBus.SendCommandAsync(busHandle, data);
         }
 
@@ -129,6 +131,8 @@ namespace Ryujinx.HLE.HOS.Services.Hid
             context.Memory.Write(position, data);
 
             context.ResponseData.Write(outSize);
+
+            Logger.Info?.Print(LogClass.ServiceHid, $"GetSendCommandAsynceResult: {Convert.ToHexString(data, 0, (int)Math.Min(outSize, (ulong)data.Length))} (buffer 0x{size:X})");
 
             return result;
         }

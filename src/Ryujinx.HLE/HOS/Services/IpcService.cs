@@ -152,6 +152,8 @@ namespace Ryujinx.HLE.HOS.Services
                     _parameters[0] = context;
                     
                     result = (ResultCode)processRequest.Invoke(service, _parameters);
+
+                    TraceHidCall(service, processRequest.Name, result);
                 }
                 else
                 {
@@ -183,6 +185,34 @@ namespace Ryujinx.HLE.HOS.Services
 
                 throw new ServiceNotImplementedException(service, context, dbgMessage);
             }
+        }
+
+        // TODO: Temporary Ring-Con debugging aid, logs the first call of each hid/hidbus command and every failing call.
+        private static readonly HashSet<string> _tracedHidCalls = [];
+
+        private static void TraceHidCall(IpcService service, string name, ResultCode result)
+        {
+            string serviceName = service.GetType().Name;
+
+            if (result != 0)
+            {
+                Logger.Warning?.Print(LogClass.KernelIpc, $"{serviceName}: {name} returned {result} (0x{(int)result:X})");
+            }
+
+            if (serviceName is not ("IHidServer" or "IHidbusServer" or "IAppletResource" or "IActiveApplicationDeviceList"))
+            {
+                return;
+            }
+
+            lock (_tracedHidCalls)
+            {
+                if (!_tracedHidCalls.Add($"{serviceName}.{name}"))
+                {
+                    return;
+                }
+            }
+
+            Logger.Info?.Print(LogClass.KernelIpc, $"First call: {serviceName}.{name} -> {result}");
         }
 
         public void CallTipcMethod(ServiceCtx context)

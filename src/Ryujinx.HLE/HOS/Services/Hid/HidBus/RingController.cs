@@ -125,6 +125,12 @@ namespace Ryujinx.HLE.HOS.Services.Hid.HidBus
             }
 
             TransferMemoryOwner.CpuMemory.Write(TransferMemoryAddress, _enableSixAxisData);
+
+            // TODO: Temporary Ring-Con debugging aid.
+            if (entry.SamplingNumber % 66 == 1)
+            {
+                Logger.Info?.Print(LogClass.ServiceHid, $"Ring-Con polling: sampling={entry.SamplingNumber}, value={BinaryPrimitives.ReadInt16LittleEndian(data[4..])}, address=0x{TransferMemoryAddress:X}");
+            }
         }
 
         private short GetSensorValue()
