@@ -169,6 +169,8 @@ namespace Ryujinx.HLE.HOS.Services.Hid
 
         public void Update(IList<GamepadInput> states)
         {
+            ReconnectOnButtonPress(states);
+
             Remap();
 
             Span<bool> updated = stackalloc bool[10];
@@ -188,6 +190,30 @@ namespace Ryujinx.HLE.HOS.Services.Hid
                 if (!updated[i])
                 {
                     UpdateDisconnectedInput((PlayerIndex)i);
+                }
+            }
+        }
+
+        // Like on hardware, pressing a button on a controller disconnected by the application reconnects it.
+        private void ReconnectOnButtonPress(IList<GamepadInput> states)
+        {
+            const ControllerKeys StickDirections = ControllerKeys.LStickLeft | ControllerKeys.LStickUp | ControllerKeys.LStickRight | ControllerKeys.LStickDown |
+                                                   ControllerKeys.RStickLeft | ControllerKeys.RStickUp | ControllerKeys.RStickRight | ControllerKeys.RStickDown;
+
+            for (int i = 0; i < states.Count; ++i)
+            {
+                GamepadInput state = states[i];
+
+                if ((uint)state.PlayerId >= _disconnectedByApplication.Length || !_disconnectedByApplication[(int)state.PlayerId])
+                {
+                    continue;
+                }
+
+                if ((state.Buttons & ~StickDirections) != 0)
+                {
+                    _disconnectedByApplication[(int)state.PlayerId] = false;
+
+                    Logger.Info?.Print(LogClass.Hid, $"Reconnecting {state.PlayerId} after a button press");
                 }
             }
         }
