@@ -3,6 +3,7 @@ using Ryujinx.Common.Configuration.Hid;
 using Ryujinx.Common.Memory;
 using Ryujinx.HLE.Exceptions;
 using Ryujinx.HLE.HOS.Kernel.Memory;
+using Ryujinx.HLE.HOS.Services.Hid.HidBus;
 using Ryujinx.HLE.HOS.Services.Hid.Types.SharedMemory;
 using Ryujinx.HLE.HOS.Services.Hid.Types.SharedMemory.Common;
 using Ryujinx.HLE.HOS.Services.Hid.Types.SharedMemory.DebugMouse;
@@ -32,6 +33,7 @@ namespace Ryujinx.HLE.HOS.Services.Hid
         public DebugMouseDevice DebugMouse;
         public KeyboardDevice Keyboard;
         public NpadDevices Npads;
+        public HidBusDevices HidBus;
 
         private static void CheckTypeSizeOrThrow<T>(int expectedSize)
         {
@@ -70,6 +72,7 @@ namespace Ryujinx.HLE.HOS.Services.Hid
             DebugMouse = new DebugMouseDevice(_device, false);
             Keyboard = new KeyboardDevice(_device, false);
             Npads = new NpadDevices(_device, true);
+            HidBus = new HidBusDevices(_device.System.KernelContext, _device.System.HidBusStorage);
         }
 
         public void RefreshInputConfig(List<InputConfig> inputConfig)

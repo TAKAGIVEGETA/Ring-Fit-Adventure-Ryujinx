@@ -74,6 +74,12 @@
                                 <TextBlock
                                     Text="{ext:Locale SettingsTabInputDirectMouseAccess}" />
                             </CheckBox>
+                            <CheckBox
+                                ToolTip.Tip="{ext:Locale RingConTooltip}"
+                                IsChecked="{Binding EnableRingCon}">
+                                <TextBlock
+                                    Text="{ext:Locale SettingsTabInputEnableRingCon}" />
+                            </CheckBox>
                         </StackPanel>
                     </StackPanel>
                 </Grid>

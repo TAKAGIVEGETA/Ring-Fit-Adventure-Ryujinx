@@ -8,6 +8,7 @@ namespace Ryujinx.Input.HLE
         public IGamepadDriver KeyboardDriver { get; } = keyboardDriver;
         public IGamepadDriver GamepadDriver { get; } = gamepadDriver;
         public IGamepadDriver MouseDriver { get; private set; }
+        public IRingConDriver RingConDriver { get; private set; }
 
         public void SetMouseDriver(IGamepadDriver mouseDriver)
         {
@@ -16,9 +17,16 @@ namespace Ryujinx.Input.HLE
             MouseDriver = mouseDriver;
         }
 
+        public void SetRingConDriver(IRingConDriver ringConDriver)
+        {
+            RingConDriver?.Dispose();
+
+            RingConDriver = ringConDriver;
+        }
+
         public NpadManager CreateNpadManager()
         {
-            return new NpadManager(KeyboardDriver, GamepadDriver, MouseDriver);
+            return new NpadManager(KeyboardDriver, GamepadDriver, MouseDriver, RingConDriver);
         }
 
         public TouchScreenManager CreateTouchScreenManager()
@@ -38,6 +46,7 @@ namespace Ryujinx.Input.HLE
                 KeyboardDriver?.Dispose();
                 GamepadDriver?.Dispose();
                 MouseDriver?.Dispose();
+                RingConDriver?.Dispose();
             }
         }
 

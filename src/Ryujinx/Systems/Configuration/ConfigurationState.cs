@@ -140,6 +140,7 @@ namespace Ryujinx.Ava.Systems.Configuration
                 ShowConsole = UI.ShowConsole,
                 EnableKeyboard = Hid.EnableKeyboard,
                 EnableMouse = Hid.EnableMouse,
+                EnableRingCon = Hid.EnableRingCon,
                 DisableInputWhenOutOfFocus = Hid.DisableInputWhenOutOfFocus,
                 Hotkeys = Hid.Hotkeys,
                 InputConfig = Hid.InputConfig,
@@ -266,6 +267,7 @@ namespace Ryujinx.Ava.Systems.Configuration
             UI.PauseEmulationWhileScanningAmiibo.Value = true;
             Hid.EnableKeyboard.Value = false;
             Hid.EnableMouse.Value = false;
+            Hid.EnableRingCon.Value = false;
             Hid.DisableInputWhenOutOfFocus.Value = false;
             Hid.Hotkeys.Value = new KeyboardHotkeys
             {

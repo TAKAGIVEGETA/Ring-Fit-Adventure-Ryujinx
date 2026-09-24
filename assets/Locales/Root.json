@@ -1,6 +1,56 @@
 {
   "Locales": [
     {
+      "ID": "SettingsTabInputEnableRingCon",
+      "Translations": {
+        "ar_SA": "",
+        "de_DE": "",
+        "el_GR": "",
+        "en_US": "Enable Ring-Con",
+        "es_ES": "",
+        "fr_FR": "",
+        "he_IL": "",
+        "it_IT": "",
+        "ja_JP": "リングコンを有効にする",
+        "ko_KR": "",
+        "no_NO": "",
+        "pl_PL": "",
+        "pt_BR": "",
+        "ru_RU": "",
+        "sv_SE": "",
+        "th_TH": "",
+        "tr_TR": "",
+        "uk_UA": "",
+        "zh_CN": "启用 Ring-Con（健身环）",
+        "zh_TW": "啟用 Ring-Con（健身環）"
+      }
+    },
+    {
+      "ID": "RingConTooltip",
+      "Translations": {
+        "ar_SA": "",
+        "de_DE": "",
+        "el_GR": "",
+        "en_US": "Attaches an emulated Ring-Con to the right Joy-Con rail of Player 1, for games such as Ring Fit Adventure.\n\nIf a physical Ring-Con is attached to a right Joy-Con connected over Bluetooth, its force is read directly from the controller.\n\nLeave OFF if unsure.",
+        "es_ES": "",
+        "fr_FR": "",
+        "he_IL": "",
+        "it_IT": "",
+        "ja_JP": "プレイヤー 1 の右 Joy-Con にエミュレートされたリングコンを接続します（リングフィット アドベンチャーなど）。\n\nBluetooth で接続した右 Joy-Con に実物のリングコンが装着されている場合は、コントローラーから直接力の値を読み取ります。\n\nわからない場合はオフのままにしてください。",
+        "ko_KR": "",
+        "no_NO": "",
+        "pl_PL": "",
+        "pt_BR": "",
+        "ru_RU": "",
+        "sv_SE": "",
+        "th_TH": "",
+        "tr_TR": "",
+        "uk_UA": "",
+        "zh_CN": "为玩家 1 的右 Joy-Con 连接一个模拟的 Ring-Con（健身环），用于《健身环大冒险》等游戏。\n\n如果通过蓝牙连接的右 Joy-Con 上插着真实的 Ring-Con，将直接从手柄读取力度数据。\n\n如果不确定，请保持关闭状态。",
+        "zh_TW": "為玩家 1 的右 Joy-Con 連接一個模擬的 Ring-Con（健身環），用於《健身環大冒險》等遊戲。\n\n如果透過藍牙連接的右 Joy-Con 上插著真實的 Ring-Con，將直接從手把讀取力度資料。\n\n如果不確定，請保持關閉狀態。"
+      }
+    },
+    {
       "ID": "SettingsTabInputDirectMouseAccess",
       "Translations": {
         "ar_SA": "الوصول المباشر للفأرة",

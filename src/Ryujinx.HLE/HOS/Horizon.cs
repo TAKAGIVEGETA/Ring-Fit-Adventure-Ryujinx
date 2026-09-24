@@ -50,6 +50,7 @@ namespace Ryujinx.HLE.HOS
         internal const int IirsSize = 0x8000;
         internal const int TimeSize = 0x1000;
         internal const int AppletCaptureBufferSize = 0x384000;
+        internal const int HidBusSize = 0x1000;
 
         internal KernelContext KernelContext { get; }
 
@@ -85,6 +86,7 @@ namespace Ryujinx.HLE.HOS
         internal KSharedMemory HidSharedMem { get; private set; }
         internal KSharedMemory FontSharedMem { get; private set; }
         internal KSharedMemory IirsSharedMem { get; private set; }
+        internal KSharedMemory HidBusSharedMem { get; private set; }
 
         internal KTransferMemory AppletCaptureBufferTransfer { get; private set; }
 
@@ -108,6 +110,7 @@ namespace Ryujinx.HLE.HOS
         public int GlobalAccessLogMode { get; set; }
 
         internal SharedMemoryStorage HidStorage { get; private set; }
+        internal SharedMemoryStorage HidBusStorage { get; private set; }
 
         internal NvHostSyncpt HostSyncpoint { get; private set; }
 
@@ -146,30 +149,36 @@ namespace Ryujinx.HLE.HOS
             ulong iirsPa = region.Address + HidSize + FontSize;
             ulong timePa = region.Address + HidSize + FontSize + IirsSize;
             ulong appletCaptureBufferPa = region.Address + HidSize + FontSize + IirsSize + TimeSize;
+            ulong hidBusPa = region.Address + HidSize + FontSize + IirsSize + TimeSize + AppletCaptureBufferSize;
 
             KPageList hidPageList = new();
             KPageList fontPageList = new();
             KPageList iirsPageList = new();
             KPageList timePageList = new();
             KPageList appletCaptureBufferPageList = new();
+            KPageList hidBusPageList = new();
 
             hidPageList.AddRange(hidPa, HidSize / KPageTableBase.PageSize);
             fontPageList.AddRange(fontPa, FontSize / KPageTableBase.PageSize);
             iirsPageList.AddRange(iirsPa, IirsSize / KPageTableBase.PageSize);
             timePageList.AddRange(timePa, TimeSize / KPageTableBase.PageSize);
             appletCaptureBufferPageList.AddRange(appletCaptureBufferPa, AppletCaptureBufferSize / KPageTableBase.PageSize);
+            hidBusPageList.AddRange(hidBusPa, HidBusSize / KPageTableBase.PageSize);
 
             SharedMemoryStorage hidStorage = new(KernelContext, hidPageList);
             SharedMemoryStorage fontStorage = new(KernelContext, fontPageList);
             SharedMemoryStorage iirsStorage = new(KernelContext, iirsPageList);
             SharedMemoryStorage timeStorage = new(KernelContext, timePageList);
             SharedMemoryStorage appletCaptureBufferStorage = new(KernelContext, appletCaptureBufferPageList);
+            SharedMemoryStorage hidBusStorage = new(KernelContext, hidBusPageList);
 
             HidStorage = hidStorage;
+            HidBusStorage = hidBusStorage;
 
             HidSharedMem = new KSharedMemory(KernelContext, hidStorage, 0, 0, KMemoryPermission.Read);
             FontSharedMem = new KSharedMemory(KernelContext, fontStorage, 0, 0, KMemoryPermission.Read);
             IirsSharedMem = new KSharedMemory(KernelContext, iirsStorage, 0, 0, KMemoryPermission.Read);
+            HidBusSharedMem = new KSharedMemory(KernelContext, hidBusStorage, 0, 0, KMemoryPermission.Read);
 
             KSharedMemory timeSharedMemory = new(KernelContext, timeStorage, 0, 0, KMemoryPermission.Read);
 

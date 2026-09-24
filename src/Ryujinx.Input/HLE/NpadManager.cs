@@ -3,6 +3,7 @@ using Ryujinx.Common.Configuration.Hid;
 using Ryujinx.Common.Configuration.Hid.Controller;
 using Ryujinx.Common.Configuration.Hid.Keyboard;
 using Ryujinx.HLE.HOS.Services.Hid;
+using Ryujinx.HLE.HOS.Services.Hid.HidBus;
 using System;
 using System.Buffers;
 using System.Collections.Generic;
@@ -33,6 +34,7 @@ namespace Ryujinx.Input.HLE
         private readonly IGamepadDriver _keyboardDriver;
         private readonly IGamepadDriver _gamepadDriver;
         private readonly IGamepadDriver _mouseDriver;
+        private readonly IRingConDriver _ringConDriver;
         private bool _isDisposed;
 
         private List<InputConfig> _inputConfig;
@@ -45,7 +47,12 @@ namespace Ryujinx.Input.HLE
         private readonly List<GamepadInput> _hleInputStates = [];
         private readonly List<SixAxisInput> _hleMotionStates = new(NpadDevices.MaxControllers);
 
-        public NpadManager(IGamepadDriver keyboardDriver, IGamepadDriver gamepadDriver, IGamepadDriver mouseDriver)
+        /// <summary>
+        /// Attach an emulated Ring-Con to the right Joy-Con rail, backed by the physical one when available.
+        /// </summary>
+        public bool EnableRingCon { get; set; }
+
+        public NpadManager(IGamepadDriver keyboardDriver, IGamepadDriver gamepadDriver, IGamepadDriver mouseDriver, IRingConDriver ringConDriver = null)
         {
             _controllers = new NpadController[MaxControllers];
             _cemuHookClient = new CemuHookClient(this);
@@ -53,6 +60,7 @@ namespace Ryujinx.Input.HLE
             _keyboardDriver = keyboardDriver;
             _gamepadDriver = gamepadDriver;
             _mouseDriver = mouseDriver;
+            _ringConDriver = ringConDriver;
             _inputConfig = [];
             _requestedInputConfig = [];
             _playerInputAssignments = [];
@@ -376,6 +384,7 @@ namespace Ryujinx.Input.HLE
         {
             _device = device;
             _device.Configuration.RefreshInputConfig = RefreshInputConfigForHLE;
+            _device.Hid.HidBus.EnableRingCon = EnableRingCon;
 
             ReloadConfiguration(inputConfig, playerInputAssignments, enableKeyboard, enableMouse);
         }
@@ -446,6 +455,8 @@ namespace Ryujinx.Input.HLE
                 _device.Hid.Npads.Update(_hleInputStates);
                 _device.Hid.Npads.UpdateSixAxis(_hleMotionStates);
 
+                UpdateRingCon();
+
                 if (hleKeyboardInput.HasValue)
                 {
                     _device.Hid.Keyboard.Update(hleKeyboardInput.Value);
@@ -499,6 +510,21 @@ namespace Ryujinx.Input.HLE
             }
         }
 
+        private void UpdateRingCon()
+        {
+            HidBusDevices hidBus = _device.Hid.HidBus;
+
+            hidBus.EnableRingCon = EnableRingCon;
+
+            bool isActive = EnableRingCon && hidBus.IsRingConActive;
+
+            _ringConDriver?.SetActive(isActive);
+
+            float force = isActive && _ringConDriver is { IsConnected: true } ? _ringConDriver.Force : 0f;
+
+            hidBus.Update(force);
+        }
+
         public InputConfig GetPlayerInputConfigByIndex(int index)
         {
             lock (_lock)
@@ -518,6 +544,8 @@ namespace Ryujinx.Input.HLE
                     if (!_isDisposed)
                     {
                         _cemuHookClient.Dispose();
+
+                        _ringConDriver?.SetActive(false);
 
                         _gamepadDriver.OnGamepadConnected -= HandleOnGamepadConnected;
                         _gamepadDriver.OnGamepadDisconnected -= HandleOnGamepadDisconnected;

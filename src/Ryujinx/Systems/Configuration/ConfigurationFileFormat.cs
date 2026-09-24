@@ -412,6 +412,11 @@ namespace Ryujinx.Ava.Systems.Configuration
         public bool EnableMouse { get; set; }
 
         /// <summary>
+        /// Enable or disable Ring-Con support
+        /// </summary>
+        public bool EnableRingCon { get; set; }
+
+        /// <summary>
         /// Enable/disable the ability to control Ryujinx when it's not the currently focused window.
         /// </summary>
         public bool DisableInputWhenOutOfFocus { get; set; }

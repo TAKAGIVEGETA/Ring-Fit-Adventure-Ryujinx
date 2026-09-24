@@ -167,6 +167,7 @@ namespace Ryujinx.Ava.Systems
             _keyboardInterface = (IKeyboard)_inputManager.KeyboardDriver.GetGamepad("0");
 
             NpadManager = _inputManager.CreateNpadManager();
+            NpadManager.EnableRingCon = ConfigurationState.Instance.Hid.EnableRingCon.Value;
             TouchScreenManager = _inputManager.CreateTouchScreenManager();
             ApplicationPath = applicationPath;
             ApplicationId = applicationId;
@@ -201,6 +202,7 @@ namespace Ryujinx.Ava.Systems
             ConfigurationState.Instance.System.IgnoreMissingServices.Event += UpdateIgnoreMissingServicesState;
             ConfigurationState.Instance.Graphics.AspectRatio.Event += UpdateAspectRatioState;
             ConfigurationState.Instance.System.EnableDockedMode.Event += UpdateDockedModeState;
+            ConfigurationState.Instance.Hid.EnableRingCon.Event += UpdateRingConState;
             ConfigurationState.Instance.System.AudioVolume.Event += UpdateAudioVolumeState;
             ConfigurationState.Instance.Graphics.AntiAliasing.Event += UpdateAntiAliasing;
             ConfigurationState.Instance.Graphics.ScalingFilter.Event += UpdateScalingFilter;
@@ -521,6 +523,11 @@ namespace Ryujinx.Ava.Systems
             Device?.System.ChangeDockedModeState(e.NewValue);
         }
 
+        private void UpdateRingConState(object sender, ReactiveEventArgs<bool> e)
+        {
+            NpadManager.EnableRingCon = e.NewValue;
+        }
+
         public void UpdateAudioVolumeState(object sender, ReactiveEventArgs<float> e)
         {
             Device?.SetVolume(e.NewValue);
@@ -656,6 +663,7 @@ namespace Ryujinx.Ava.Systems
             ConfigurationState.Instance.System.IgnoreMissingServices.Event -= UpdateIgnoreMissingServicesState;
             ConfigurationState.Instance.Graphics.AspectRatio.Event -= UpdateAspectRatioState;
             ConfigurationState.Instance.System.EnableDockedMode.Event -= UpdateDockedModeState;
+            ConfigurationState.Instance.Hid.EnableRingCon.Event -= UpdateRingConState;
             ConfigurationState.Instance.System.AudioVolume.Event -= UpdateAudioVolumeState;
             ConfigurationState.Instance.Graphics.ScalingFilter.Event -= UpdateScalingFilter;
             ConfigurationState.Instance.Graphics.ScalingFilterLevel.Event -= UpdateScalingFilterLevel;

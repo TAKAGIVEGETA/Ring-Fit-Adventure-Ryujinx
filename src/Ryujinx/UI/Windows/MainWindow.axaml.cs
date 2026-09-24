@@ -111,6 +111,7 @@ namespace Ryujinx.Ava.UI.Windows
                 AvaloniaKeyboardDriver keyboardDriver = new(this, KeyboardInputMode.Semantic);
                 keyboardDriver.KeyPressed += PhysicalKeyLabelHelper.ObserveKeyPress;
                 InputManager = new InputManager(keyboardDriver, new SDL3GamepadDriver());
+                InputManager.SetRingConDriver(new SDL3RingConDriver());
 
                 _ = this.GetObservable(IsActiveProperty).Subscribe(it => ViewModel.IsActive = it);
                 this.ScalingChanged += OnScalingChanged;
