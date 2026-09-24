@@ -705,6 +705,19 @@ namespace Ryujinx.HLE.HOS.Services.Hid
             return ResultCode.Success;
         }
 
+        [CommandCmif(89)] // 13.0.0+
+        // ResetIsSixAxisSensorDeviceNewlyAssigned(nn::applet::AppletResourceUserId, nn::hid::SixAxisSensorHandle)
+        public ResultCode ResetIsSixAxisSensorDeviceNewlyAssigned(ServiceCtx context)
+        {
+            int sixAxisSensorHandle = context.RequestData.ReadInt32();
+            context.RequestData.BaseStream.Position += 4; // Padding
+            long appletResourceUserId = context.RequestData.ReadInt64();
+
+            Logger.Stub?.PrintStub(LogClass.ServiceHid, new { appletResourceUserId, sixAxisSensorHandle });
+
+            return ResultCode.Success;
+        }
+
         [CommandCmif(91)]
         // ActivateGesture(nn::applet::AppletResourceUserId, int Unknown0)
         public ResultCode ActivateGesture(ServiceCtx context)
@@ -1163,6 +1176,32 @@ namespace Ryujinx.HLE.HOS.Services.Hid
             long appletResourceUserId = context.RequestData.ReadInt64();
 
             Logger.Stub?.PrintStub(LogClass.ServiceHid, new { pid, appletResourceUserId, _npadAnalogStickCenterClampEnabled });
+
+            return ResultCode.Success;
+        }
+
+        [CommandCmif(135)] // 8.0.0+
+        // SetNpadCaptureButtonAssignment(nn::hid::NpadStyleSet, nn::applet::AppletResourceUserId, nn::hid::NpadButton, pid)
+        public ResultCode SetNpadCaptureButtonAssignment(ServiceCtx context)
+        {
+            // NOTE: Used by games that support a single right Joy-Con (which has no capture button), such as Ring Fit Adventure.
+            uint npadStyleSet = context.RequestData.ReadUInt32();
+            context.RequestData.BaseStream.Position += 4; // Padding
+            long appletResourceUserId = context.RequestData.ReadInt64();
+            ulong npadButton = context.RequestData.ReadUInt64();
+
+            Logger.Stub?.PrintStub(LogClass.ServiceHid, new { appletResourceUserId, npadStyleSet, npadButton });
+
+            return ResultCode.Success;
+        }
+
+        [CommandCmif(136)] // 8.0.0+
+        // ClearNpadCaptureButtonAssignment(nn::applet::AppletResourceUserId, pid)
+        public ResultCode ClearNpadCaptureButtonAssignment(ServiceCtx context)
+        {
+            long appletResourceUserId = context.RequestData.ReadInt64();
+
+            Logger.Stub?.PrintStub(LogClass.ServiceHid, new { appletResourceUserId });
 
             return ResultCode.Success;
         }
