@@ -713,7 +713,19 @@ namespace Ryujinx.HLE.HOS.Services.Hid
             context.RequestData.BaseStream.Position += 4; // Padding
             long appletResourceUserId = context.RequestData.ReadInt64();
 
-            Logger.Stub?.PrintStub(LogClass.ServiceHid, new { appletResourceUserId, sixAxisSensorHandle });
+            // SixAxisSensorHandle: u8 NpadStyleIndex, u8 NpadIdType, u8 DeviceIndex (0 = left, 1 = right)
+            NpadStyleIndex styleIndex = (NpadStyleIndex)(byte)sixAxisSensorHandle;
+            NpadIdType npadIdType = (NpadIdType)(byte)(sixAxisSensorHandle >> 8);
+            bool isRightDevice = (byte)(sixAxisSensorHandle >> 16) == 1;
+
+            if (!HidUtils.IsValidNpadIdType(npadIdType))
+            {
+                return ResultCode.InvalidNpadIdType;
+            }
+
+            context.Device.Hid.Npads.ResetIsSixAxisSensorDeviceNewlyAssigned(HidUtils.GetIndexFromNpadIdType(npadIdType), styleIndex, isRightDevice);
+
+            Logger.Info?.Print(LogClass.ServiceHid, $"ResetIsSixAxisSensorDeviceNewlyAssigned: appletResourceUserId={appletResourceUserId}, style={styleIndex}, npadIdType={npadIdType}, isRightDevice={isRightDevice}");
 
             return ResultCode.Success;
         }

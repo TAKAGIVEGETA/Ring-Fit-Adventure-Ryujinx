@@ -146,6 +146,40 @@ namespace Ryujinx.HLE.HOS.Services.Hid
             _device.Hid.SharedMemory.Npads[(int)player].InternalState.JoyAssignmentMode = mode;
         }
 
+        // Index of each style in NpadInternalState.SixAxisSensorPropertiesArray (one byte per style).
+        private const int SixAxisPropertiesFullKey = 0;
+        private const int SixAxisPropertiesHandheld = 1;
+        private const int SixAxisPropertiesJoyDualLeft = 2;
+        private const int SixAxisPropertiesJoyDualRight = 3;
+        private const int SixAxisPropertiesJoyLeft = 4;
+        private const int SixAxisPropertiesJoyRight = 5;
+
+        private const ulong SixAxisPropertyIsNewlyAssigned = 1 << 0;
+
+        private static ulong GetNewlyAssignedMask(int propertiesIndex)
+        {
+            return SixAxisPropertyIsNewlyAssigned << (propertiesIndex * 8);
+        }
+
+        internal void ResetIsSixAxisSensorDeviceNewlyAssigned(PlayerIndex player, NpadStyleIndex styleIndex, bool isRightDevice)
+        {
+            if ((uint)player >= MaxControllers)
+            {
+                return;
+            }
+
+            int propertiesIndex = styleIndex switch
+            {
+                NpadStyleIndex.Handheld => SixAxisPropertiesHandheld,
+                NpadStyleIndex.JoyDual => isRightDevice ? SixAxisPropertiesJoyDualRight : SixAxisPropertiesJoyDualLeft,
+                NpadStyleIndex.JoyLeft => SixAxisPropertiesJoyLeft,
+                NpadStyleIndex.JoyRight => SixAxisPropertiesJoyRight,
+                _ => SixAxisPropertiesFullKey,
+            };
+
+            _device.Hid.SharedMemory.Npads[(int)player].InternalState.SixAxisSensorPropertiesArray &= ~GetNewlyAssignedMask(propertiesIndex);
+        }
+
         internal void DisconnectByApplication(PlayerIndex player)
         {
             if ((uint)player >= _disconnectedByApplication.Length)
@@ -318,6 +352,7 @@ namespace Ryujinx.HLE.HOS.Services.Hid
 #pragma warning disable IDE0055 // Disable formatting
                 case ControllerType.ProController:
                     controller.StyleSet           = NpadStyleTag.FullKey;
+                    controller.SixAxisSensorPropertiesArray |= GetNewlyAssignedMask(SixAxisPropertiesFullKey);
                     controller.DeviceType         = DeviceType.FullKey;
                     controller.SystemProperties  |= NpadSystemProperties.IsAbxyButtonOriented |
                                                     NpadSystemProperties.IsPlusAvailable      |
@@ -326,6 +361,7 @@ namespace Ryujinx.HLE.HOS.Services.Hid
                     break;
                 case ControllerType.Handheld:
                     controller.StyleSet           = NpadStyleTag.Handheld;
+                    controller.SixAxisSensorPropertiesArray |= GetNewlyAssignedMask(SixAxisPropertiesHandheld);
                     controller.JoyAssignmentMode  = _joyAssignmentModes[(int)player] = NpadJoyAssignmentMode.Dual;
                     controller.DeviceType         = DeviceType.HandheldLeft |
                                                     DeviceType.HandheldRight;
@@ -336,6 +372,7 @@ namespace Ryujinx.HLE.HOS.Services.Hid
                     break;
                 case ControllerType.JoyconPair:
                     controller.StyleSet           = NpadStyleTag.JoyDual;
+                    controller.SixAxisSensorPropertiesArray |= GetNewlyAssignedMask(SixAxisPropertiesJoyDualLeft) | GetNewlyAssignedMask(SixAxisPropertiesJoyDualRight);
                     controller.JoyAssignmentMode  = _joyAssignmentModes[(int)player] = NpadJoyAssignmentMode.Dual;
                     controller.DeviceType         = DeviceType.JoyLeft |
                                                     DeviceType.JoyRight;
@@ -346,6 +383,7 @@ namespace Ryujinx.HLE.HOS.Services.Hid
                     break;
                 case ControllerType.JoyconLeft:
                     controller.StyleSet           = NpadStyleTag.JoyLeft;
+                    controller.SixAxisSensorPropertiesArray |= GetNewlyAssignedMask(SixAxisPropertiesJoyLeft);
                     controller.DeviceType         = DeviceType.JoyLeft;
                     controller.SystemProperties  |= NpadSystemProperties.IsSlSrButtonOriented |
                                                     NpadSystemProperties.IsMinusAvailable;
@@ -353,6 +391,7 @@ namespace Ryujinx.HLE.HOS.Services.Hid
                     break;
                 case ControllerType.JoyconRight:
                     controller.StyleSet           = NpadStyleTag.JoyRight;
+                    controller.SixAxisSensorPropertiesArray |= GetNewlyAssignedMask(SixAxisPropertiesJoyRight);
                     controller.DeviceType         = DeviceType.JoyRight;
                     controller.SystemProperties  |= NpadSystemProperties.IsSlSrButtonOriented |
                                                     NpadSystemProperties.IsPlusAvailable;
