@@ -849,9 +849,17 @@ namespace Ryujinx.HLE.HOS.Services.Hid
         public ResultCode DisconnectNpad(ServiceCtx context)
         {
             NpadIdType npadIdType = (NpadIdType)context.RequestData.ReadInt32();
+            context.RequestData.BaseStream.Position += 4; // Padding
             long appletResourceUserId = context.RequestData.ReadInt64();
 
-            Logger.Stub?.PrintStub(LogClass.ServiceHid, new { appletResourceUserId, npadIdType });
+            if (!HidUtils.IsValidNpadIdType(npadIdType))
+            {
+                return ResultCode.InvalidNpadIdType;
+            }
+
+            context.Device.Hid.Npads.DisconnectByApplication(HidUtils.GetIndexFromNpadIdType(npadIdType));
+
+            Logger.Info?.Print(LogClass.ServiceHid, $"DisconnectNpad: npadIdType={npadIdType}, appletResourceUserId={appletResourceUserId}");
 
             return ResultCode.Success;
         }

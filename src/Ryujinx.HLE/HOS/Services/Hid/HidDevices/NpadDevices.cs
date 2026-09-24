@@ -21,6 +21,8 @@ namespace Ryujinx.HLE.HOS.Services.Hid
         private ControllerType[] _configuredTypes;
         private readonly KEvent[] _styleSetUpdateEvents;
         private readonly bool[] _supportedPlayers;
+        // Players disconnected by the application, they stay disconnected until the input configuration changes.
+        private readonly bool[] _disconnectedByApplication;
         private VibrationValue _neutralVibrationValue = new()
         {
             AmplitudeLow = 0.01f,
@@ -46,6 +48,8 @@ namespace Ryujinx.HLE.HOS.Services.Hid
 
             _supportedPlayers = new bool[MaxControllers];
             _supportedPlayers.AsSpan().Fill(true);
+
+            _disconnectedByApplication = new bool[MaxControllers];
 
             _styleSetUpdateEvents = new KEvent[MaxControllers];
             for (int i = 0; i < _styleSetUpdateEvents.Length; ++i)
@@ -126,9 +130,21 @@ namespace Ryujinx.HLE.HOS.Services.Hid
             return true;
         }
 
+        internal void DisconnectByApplication(PlayerIndex player)
+        {
+            if ((uint)player >= _disconnectedByApplication.Length)
+            {
+                return;
+            }
+
+            // The npad is reset on the next input update, see Remap.
+            _disconnectedByApplication[(int)player] = true;
+        }
+
         public void Configure(params ReadOnlySpan<ControllerConfig> configs)
         {
             _configuredTypes = new ControllerType[MaxControllers];
+            _disconnectedByApplication.AsSpan().Clear();
 
             for (int i = 0; i < configs.Length; ++i)
             {
@@ -200,7 +216,7 @@ namespace Ryujinx.HLE.HOS.Services.Hid
                 }
 
                 // Check StyleSet and PlayerSet
-                if ((config & SupportedStyleSets) == 0 || !_supportedPlayers[i])
+                if ((config & SupportedStyleSets) == 0 || !_supportedPlayers[i] || _disconnectedByApplication[i])
                 {
                     config = ControllerType.None;
                 }
