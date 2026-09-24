@@ -996,7 +996,7 @@ namespace Ryujinx.HLE.HOS.Services.Hid
 
             if (HidUtils.IsValidNpadIdType(npadIdType))
             {
-                context.Device.Hid.SharedMemory.Npads[(int)HidUtils.GetIndexFromNpadIdType(npadIdType)].InternalState.JoyAssignmentMode = NpadJoyAssignmentMode.Single;
+                context.Device.Hid.Npads.SetJoyAssignmentMode(HidUtils.GetIndexFromNpadIdType(npadIdType), NpadJoyAssignmentMode.Single);
             }
 
             return ResultCode.Success;
@@ -1031,7 +1031,7 @@ namespace Ryujinx.HLE.HOS.Services.Hid
 
             if (HidUtils.IsValidNpadIdType(npadIdType))
             {
-                context.Device.Hid.SharedMemory.Npads[(int)HidUtils.GetIndexFromNpadIdType(npadIdType)].InternalState.JoyAssignmentMode = NpadJoyAssignmentMode.Dual;
+                context.Device.Hid.Npads.SetJoyAssignmentMode(HidUtils.GetIndexFromNpadIdType(npadIdType), NpadJoyAssignmentMode.Dual);
             }
 
             return ResultCode.Success;
@@ -1168,7 +1168,7 @@ namespace Ryujinx.HLE.HOS.Services.Hid
             npadIdTypeSet = default;
             npadIdTypeIsSet = false;
 
-            context.Device.Hid.SharedMemory.Npads[(int)HidUtils.GetIndexFromNpadIdType(npadIdType)].InternalState.JoyAssignmentMode = NpadJoyAssignmentMode.Single;
+            context.Device.Hid.Npads.SetJoyAssignmentMode(HidUtils.GetIndexFromNpadIdType(npadIdType), NpadJoyAssignmentMode.Single);
 
             // TODO: Service seems to use the npadJoyDeviceType to find the nearest other Npad available and merge them to dual.
             //       If one is found, it returns the npadIdType of the other Npad and a bool.

@@ -21,8 +21,10 @@ namespace Ryujinx.HLE.HOS.Services.Hid
         private ControllerType[] _configuredTypes;
         private readonly KEvent[] _styleSetUpdateEvents;
         private readonly bool[] _supportedPlayers;
-        // Players disconnected by the application, they stay disconnected until the input configuration changes.
+        // Players disconnected by the application, they stay disconnected until a button is pressed or the input configuration changes.
         private readonly bool[] _disconnectedByApplication;
+        // The assignment mode is persistent across controller (re)connections, like on hardware.
+        private readonly NpadJoyAssignmentMode[] _joyAssignmentModes;
         private VibrationValue _neutralVibrationValue = new()
         {
             AmplitudeLow = 0.01f,
@@ -50,6 +52,9 @@ namespace Ryujinx.HLE.HOS.Services.Hid
             _supportedPlayers.AsSpan().Fill(true);
 
             _disconnectedByApplication = new bool[MaxControllers];
+
+            _joyAssignmentModes = new NpadJoyAssignmentMode[MaxControllers];
+            _joyAssignmentModes.AsSpan().Fill(NpadJoyAssignmentMode.Dual);
 
             _styleSetUpdateEvents = new KEvent[MaxControllers];
             for (int i = 0; i < _styleSetUpdateEvents.Length; ++i)
@@ -128,6 +133,17 @@ namespace Ryujinx.HLE.HOS.Services.Hid
             }
 
             return true;
+        }
+
+        internal void SetJoyAssignmentMode(PlayerIndex player, NpadJoyAssignmentMode mode)
+        {
+            if ((uint)player >= _joyAssignmentModes.Length)
+            {
+                return;
+            }
+
+            _joyAssignmentModes[(int)player] = mode;
+            _device.Hid.SharedMemory.Npads[(int)player].InternalState.JoyAssignmentMode = mode;
         }
 
         internal void DisconnectByApplication(PlayerIndex player)
@@ -281,7 +297,7 @@ namespace Ryujinx.HLE.HOS.Services.Hid
             }
 
             // TODO: Allow customizing colors at config
-            controller.JoyAssignmentMode = NpadJoyAssignmentMode.Dual;
+            controller.JoyAssignmentMode = _joyAssignmentModes[(int)player];
             controller.FullKeyColor.FullKeyBody = (uint)NpadColor.BodyGray;
             controller.FullKeyColor.FullKeyButtons = (uint)NpadColor.ButtonGray;
             controller.JoyColor.LeftBody = (uint)NpadColor.BodyNeonBlue;
@@ -310,6 +326,7 @@ namespace Ryujinx.HLE.HOS.Services.Hid
                     break;
                 case ControllerType.Handheld:
                     controller.StyleSet           = NpadStyleTag.Handheld;
+                    controller.JoyAssignmentMode  = _joyAssignmentModes[(int)player] = NpadJoyAssignmentMode.Dual;
                     controller.DeviceType         = DeviceType.HandheldLeft |
                                                     DeviceType.HandheldRight;
                     controller.SystemProperties  |= NpadSystemProperties.IsAbxyButtonOriented |
@@ -319,6 +336,7 @@ namespace Ryujinx.HLE.HOS.Services.Hid
                     break;
                 case ControllerType.JoyconPair:
                     controller.StyleSet           = NpadStyleTag.JoyDual;
+                    controller.JoyAssignmentMode  = _joyAssignmentModes[(int)player] = NpadJoyAssignmentMode.Dual;
                     controller.DeviceType         = DeviceType.JoyLeft |
                                                     DeviceType.JoyRight;
                     controller.SystemProperties  |= NpadSystemProperties.IsAbxyButtonOriented |
@@ -328,7 +346,6 @@ namespace Ryujinx.HLE.HOS.Services.Hid
                     break;
                 case ControllerType.JoyconLeft:
                     controller.StyleSet           = NpadStyleTag.JoyLeft;
-                    controller.JoyAssignmentMode  = NpadJoyAssignmentMode.Single;
                     controller.DeviceType         = DeviceType.JoyLeft;
                     controller.SystemProperties  |= NpadSystemProperties.IsSlSrButtonOriented |
                                                     NpadSystemProperties.IsMinusAvailable;
@@ -336,7 +353,6 @@ namespace Ryujinx.HLE.HOS.Services.Hid
                     break;
                 case ControllerType.JoyconRight:
                     controller.StyleSet           = NpadStyleTag.JoyRight;
-                    controller.JoyAssignmentMode  = NpadJoyAssignmentMode.Single;
                     controller.DeviceType         = DeviceType.JoyRight;
                     controller.SystemProperties  |= NpadSystemProperties.IsSlSrButtonOriented |
                                                     NpadSystemProperties.IsPlusAvailable;
