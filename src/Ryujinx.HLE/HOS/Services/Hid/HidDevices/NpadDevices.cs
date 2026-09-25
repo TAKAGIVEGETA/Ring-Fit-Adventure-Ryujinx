@@ -679,27 +679,36 @@ namespace Ryujinx.HLE.HOS.Services.Hid
             return needUpdateRight;
         }
         
-        public bool isAtRest(int playerNumber)
+        internal bool IsSixAxisSensorAtRest(PlayerIndex player, bool isRightDevice)
         {
-            ref NpadInternalState currentNpad = ref _device.Hid.SharedMemory.Npads[playerNumber].InternalState;
+            // Same thresholds as yuzu/Eden (MotionInput::IsMoving with IsAtRestStandard).
+            const float GyroThreshold = 0.01f; // Rotations per second
+            const float AccelMin = 0.9f; // G
+            const float AccelMax = 1.1f;
 
-            if (currentNpad.StyleSet == NpadStyleTag.None)
+            if ((uint)player >= MaxControllers)
             {
-                return true; // it will always be at rest because it cannot move.
+                return true;
             }
-            
-            ref SixAxisSensorState storage = ref GetSixAxisSensorLifo(ref currentNpad, false).GetCurrentEntryRef();
-                
-            float acceleration = Math.Abs(storage.Acceleration.X)
-                                 + Math.Abs(storage.Acceleration.Y)
-                                 + Math.Abs(storage.Acceleration.Z);
 
-            float angularVelocity = Math.Abs(storage.AngularVelocity.X)
-                                    + Math.Abs(storage.AngularVelocity.Y)
-                                    + Math.Abs(storage.AngularVelocity.Z);
+            ref NpadInternalState currentNpad = ref _device.Hid.SharedMemory.Npads[(int)player].InternalState;
 
-            // TODO: check against config deadzone and add sensitivity setting
-            return ((acceleration <= 1.0F) && (angularVelocity <= 1.0F));
+            if (currentNpad.StyleSet is not (NpadStyleTag.FullKey or NpadStyleTag.Handheld or NpadStyleTag.JoyDual or NpadStyleTag.JoyLeft or NpadStyleTag.JoyRight))
+            {
+                return true; // It will always be at rest because it cannot move.
+            }
+
+            ref SixAxisSensorState storage = ref GetSixAxisSensorLifo(ref currentNpad, isRightDevice && currentNpad.StyleSet == NpadStyleTag.JoyDual).GetCurrentEntryRef();
+
+            float acceleration = MathF.Sqrt(storage.Acceleration.X * storage.Acceleration.X +
+                                            storage.Acceleration.Y * storage.Acceleration.Y +
+                                            storage.Acceleration.Z * storage.Acceleration.Z);
+
+            float angularVelocity = MathF.Sqrt(storage.AngularVelocity.X * storage.AngularVelocity.X +
+                                               storage.AngularVelocity.Y * storage.AngularVelocity.Y +
+                                               storage.AngularVelocity.Z * storage.AngularVelocity.Z);
+
+            return angularVelocity < GyroThreshold && acceleration > AccelMin && acceleration < AccelMax;
         }
 
         private void UpdateDisconnectedInputSixAxis(PlayerIndex index)

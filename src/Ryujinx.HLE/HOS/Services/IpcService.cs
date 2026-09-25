@@ -187,8 +187,8 @@ namespace Ryujinx.HLE.HOS.Services
             }
         }
 
-        // TODO: Temporary Ring-Con debugging aid, logs the first call of each hid/hidbus command and every failing call.
-        private static readonly HashSet<string> _tracedHidCalls = [];
+        // TODO: Temporary Ring-Con debugging aid, logs every hid/hidbus call (except noisy ones) and every failing call.
+        private static readonly HashSet<string> _noisyHidCalls = ["GetGyroscopeZeroDriftMode", "IsSixAxisSensorAtRest", "SendVibrationValues", "SendVibrationValue", "GetActualVibrationValue"];
 
         private static void TraceHidCall(IpcService service, string name, ResultCode result)
         {
@@ -204,15 +204,12 @@ namespace Ryujinx.HLE.HOS.Services
                 return;
             }
 
-            lock (_tracedHidCalls)
+            if (_noisyHidCalls.Contains(name))
             {
-                if (!_tracedHidCalls.Add($"{serviceName}.{name}"))
-                {
-                    return;
-                }
+                return;
             }
 
-            Logger.Info?.Print(LogClass.KernelIpc, $"First call: {serviceName}.{name} -> {result}");
+            Logger.Info?.Print(LogClass.KernelIpc, $"Call: {serviceName}.{name} -> {result}");
         }
 
         public void CallTipcMethod(ServiceCtx context)
