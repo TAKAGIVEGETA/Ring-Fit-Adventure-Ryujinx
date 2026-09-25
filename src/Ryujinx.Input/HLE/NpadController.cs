@@ -695,6 +695,25 @@ namespace Ryujinx.Input.HLE
             return Id == id;
         }
 
+        private static bool TryGetSingleJoyConVibrationValue(IGamepad gamepad, VibrationValue left, VibrationValue right, out VibrationValue value)
+        {
+            // Matches the SDL names "Nintendo Switch Joy-Con (L)" and "Nintendo Switch Joy-Con (R)", not the combined pair.
+            if (gamepad.Name?.EndsWith("Joy-Con (L)", StringComparison.Ordinal) == true)
+            {
+                value = left;
+                return true;
+            }
+
+            if (gamepad.Name?.EndsWith("Joy-Con (R)", StringComparison.Ordinal) == true)
+            {
+                value = right;
+                return true;
+            }
+
+            value = default;
+            return false;
+        }
+
         private void ApplyRumble(IGamepad gamepad, StandardControllerInputConfig controllerConfig, (VibrationValue, VibrationValue) dualVibrationValue)
         {
             if (gamepad == null)
@@ -707,6 +726,13 @@ namespace Ryujinx.Input.HLE
             
             float low = Math.Min(1f, (float)((rightVibrationValue.AmplitudeLow * 0.85 + rightVibrationValue.AmplitudeHigh * 0.15) * controllerConfig.Rumble.StrongRumble));
             float high = Math.Min(1f, (float)((leftVibrationValue.AmplitudeLow * 0.15 + leftVibrationValue.AmplitudeHigh * 0.85) * controllerConfig.Rumble.WeakRumble));
+
+            // A single Joy-Con has one actuator driven by both rumble bands, only use the vibration of its own side.
+            if (TryGetSingleJoyConVibrationValue(gamepad, leftVibrationValue, rightVibrationValue, out VibrationValue singleJoyConVibrationValue))
+            {
+                low = Math.Min(1f, singleJoyConVibrationValue.AmplitudeLow * controllerConfig.Rumble.StrongRumble);
+                high = Math.Min(1f, singleJoyConVibrationValue.AmplitudeHigh * controllerConfig.Rumble.WeakRumble);
+            }
 
             leftVibrationValue.AmplitudeLow *= controllerConfig.Rumble.WeakRumble;
             leftVibrationValue.AmplitudeHigh *= controllerConfig.Rumble.StrongRumble;
