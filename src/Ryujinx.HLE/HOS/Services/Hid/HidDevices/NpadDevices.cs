@@ -25,6 +25,8 @@ namespace Ryujinx.HLE.HOS.Services.Hid
         private readonly bool[] _disconnectedByApplication;
         // The assignment mode is persistent across controller (re)connections, like on hardware.
         private readonly NpadJoyAssignmentMode[] _joyAssignmentModes;
+        // Controller types switched by the application through the assignment mode, they take precedence over the configured types until the input configuration changes.
+        private readonly ControllerType[] _assignmentModeTypes;
         private VibrationValue _neutralVibrationValue = new()
         {
             AmplitudeLow = 0.01f,
@@ -55,6 +57,8 @@ namespace Ryujinx.HLE.HOS.Services.Hid
 
             _joyAssignmentModes = new NpadJoyAssignmentMode[MaxControllers];
             _joyAssignmentModes.AsSpan().Fill(NpadJoyAssignmentMode.Dual);
+
+            _assignmentModeTypes = new ControllerType[MaxControllers];
 
             _styleSetUpdateEvents = new KEvent[MaxControllers];
             for (int i = 0; i < _styleSetUpdateEvents.Length; ++i)
@@ -199,20 +203,14 @@ namespace Ryujinx.HLE.HOS.Services.Hid
                 return;
             }
 
+            ControllerType targetType = currentType;
+
             if (assignmentMode == NpadJoyAssignmentMode.Dual)
             {
                 // Single → Dual: JoyLeft → JoyDual(left-only), JoyRight → JoyDual(right-only)
-                if (currentType == ControllerType.JoyconLeft)
+                if (currentType is ControllerType.JoyconLeft or ControllerType.JoyconRight)
                 {
-                    Logger.Info?.Print(LogClass.Hid, $"SetNpadMode: {player} JoyLeft → JoyDual (left-only), mode Dual");
-                    SetupNpad(player, ControllerType.None);
-                    SetupNpad(player, ControllerType.JoyconPair);
-                }
-                else if (currentType == ControllerType.JoyconRight)
-                {
-                    Logger.Info?.Print(LogClass.Hid, $"SetNpadMode: {player} JoyRight → JoyDual (right-only), mode Dual");
-                    SetupNpad(player, ControllerType.None);
-                    SetupNpad(player, ControllerType.JoyconPair);
+                    targetType = ControllerType.JoyconPair;
                 }
             }
             else if (assignmentMode == NpadJoyAssignmentMode.Single)
@@ -220,12 +218,22 @@ namespace Ryujinx.HLE.HOS.Services.Hid
                 // Dual → Single: JoyDual → JoyLeft or JoyRight (depending on deviceType)
                 if (currentType == ControllerType.JoyconPair)
                 {
-                    ControllerType targetType = deviceType == NpadJoyDeviceType.Left ? ControllerType.JoyconLeft : ControllerType.JoyconRight;
-                    Logger.Info?.Print(LogClass.Hid, $"SetNpadMode: {player} JoyDual → {targetType}, mode Single");
-                    SetupNpad(player, ControllerType.None);
-                    SetupNpad(player, targetType);
+                    targetType = deviceType == NpadJoyDeviceType.Left ? ControllerType.JoyconLeft : ControllerType.JoyconRight;
                 }
             }
+
+            if (targetType == currentType)
+            {
+                return;
+            }
+
+            Logger.Info?.Print(LogClass.Hid, $"SetNpadMode: {player} {currentType} → {targetType}, mode {assignmentMode}");
+
+            // Set before switching so that Remap doesn't revert it back to the configured type.
+            _assignmentModeTypes[(int)player] = targetType;
+
+            SetupNpad(player, ControllerType.None);
+            SetupNpad(player, targetType);
         }
 
         internal void DisconnectByApplication(PlayerIndex player)
@@ -243,6 +251,7 @@ namespace Ryujinx.HLE.HOS.Services.Hid
         {
             _configuredTypes = new ControllerType[MaxControllers];
             _disconnectedByApplication.AsSpan().Clear();
+            _assignmentModeTypes.AsSpan().Clear();
 
             for (int i = 0; i < configs.Length; ++i)
             {
@@ -322,6 +331,11 @@ namespace Ryujinx.HLE.HOS.Services.Hid
             for (int i = 0; i < MaxControllers; ++i)
             {
                 ControllerType config = _configuredTypes[i];
+
+                if (config != ControllerType.None && _assignmentModeTypes[i] != ControllerType.None)
+                {
+                    config = _assignmentModeTypes[i];
+                }
 
                 // Remove Handheld config when Docked
                 if (config == ControllerType.Handheld && _device.System.State.DockedMode)
