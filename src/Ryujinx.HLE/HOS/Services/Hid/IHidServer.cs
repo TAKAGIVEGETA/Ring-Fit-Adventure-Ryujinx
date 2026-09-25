@@ -1052,7 +1052,10 @@ namespace Ryujinx.HLE.HOS.Services.Hid
 
             if (HidUtils.IsValidNpadIdType(npadIdType))
             {
-                context.Device.Hid.Npads.SetJoyAssignmentMode(HidUtils.GetIndexFromNpadIdType(npadIdType), NpadJoyAssignmentMode.Dual);
+                PlayerIndex player = HidUtils.GetIndexFromNpadIdType(npadIdType);
+
+                context.Device.Hid.Npads.SetJoyAssignmentMode(player, NpadJoyAssignmentMode.Dual);
+                context.Device.Hid.Npads.SetNpadMode(player, NpadJoyAssignmentMode.Dual, default, out _, out _);
             }
 
             return ResultCode.Success;
@@ -1191,11 +1194,10 @@ namespace Ryujinx.HLE.HOS.Services.Hid
             npadIdTypeSet = default;
             npadIdTypeIsSet = false;
 
-            context.Device.Hid.Npads.SetJoyAssignmentMode(HidUtils.GetIndexFromNpadIdType(npadIdType), NpadJoyAssignmentMode.Single);
+            PlayerIndex player = HidUtils.GetIndexFromNpadIdType(npadIdType);
 
-            // TODO: Service seems to use the npadJoyDeviceType to find the nearest other Npad available and merge them to dual.
-            //       If one is found, it returns the npadIdType of the other Npad and a bool.
-            //       If not, it returns nothing.
+            context.Device.Hid.Npads.SetJoyAssignmentMode(player, NpadJoyAssignmentMode.Single);
+            context.Device.Hid.Npads.SetNpadMode(player, NpadJoyAssignmentMode.Single, npadJoyDeviceType, out npadIdTypeSet, out npadIdTypeIsSet);
         }
 
         [CommandCmif(134)] // 6.1.0+

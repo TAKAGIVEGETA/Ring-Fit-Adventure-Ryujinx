@@ -180,6 +180,54 @@ namespace Ryujinx.HLE.HOS.Services.Hid
             _device.Hid.SharedMemory.Npads[(int)player].InternalState.SixAxisSensorPropertiesArray &= ~GetNewlyAssignedMask(propertiesIndex);
         }
 
+        // Like Eden/hardware: switch JoyDual↔JoyLeft/JoyRight when the assignment mode changes.
+        internal void SetNpadMode(PlayerIndex player, NpadJoyAssignmentMode assignmentMode, NpadJoyDeviceType deviceType, out NpadIdType npadIdTypeSet, out bool npadIdTypeIsSet)
+        {
+            npadIdTypeSet = default;
+            npadIdTypeIsSet = false;
+
+            if ((uint)player >= MaxControllers)
+            {
+                return;
+            }
+
+            ref NpadInternalState controller = ref _device.Hid.SharedMemory.Npads[(int)player].InternalState;
+            ControllerType currentType = (ControllerType)controller.StyleSet;
+
+            if (currentType == ControllerType.None)
+            {
+                return;
+            }
+
+            if (assignmentMode == NpadJoyAssignmentMode.Dual)
+            {
+                // Single → Dual: JoyLeft → JoyDual(left-only), JoyRight → JoyDual(right-only)
+                if (currentType == ControllerType.JoyconLeft)
+                {
+                    Logger.Info?.Print(LogClass.Hid, $"SetNpadMode: {player} JoyLeft → JoyDual (left-only), mode Dual");
+                    SetupNpad(player, ControllerType.None);
+                    SetupNpad(player, ControllerType.JoyconPair);
+                }
+                else if (currentType == ControllerType.JoyconRight)
+                {
+                    Logger.Info?.Print(LogClass.Hid, $"SetNpadMode: {player} JoyRight → JoyDual (right-only), mode Dual");
+                    SetupNpad(player, ControllerType.None);
+                    SetupNpad(player, ControllerType.JoyconPair);
+                }
+            }
+            else if (assignmentMode == NpadJoyAssignmentMode.Single)
+            {
+                // Dual → Single: JoyDual → JoyLeft or JoyRight (depending on deviceType)
+                if (currentType == ControllerType.JoyconPair)
+                {
+                    ControllerType targetType = deviceType == NpadJoyDeviceType.Left ? ControllerType.JoyconLeft : ControllerType.JoyconRight;
+                    Logger.Info?.Print(LogClass.Hid, $"SetNpadMode: {player} JoyDual → {targetType}, mode Single");
+                    SetupNpad(player, ControllerType.None);
+                    SetupNpad(player, targetType);
+                }
+            }
+        }
+
         internal void DisconnectByApplication(PlayerIndex player)
         {
             if ((uint)player >= _disconnectedByApplication.Length)
