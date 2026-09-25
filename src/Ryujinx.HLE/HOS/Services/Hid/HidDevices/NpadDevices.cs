@@ -27,6 +27,9 @@ namespace Ryujinx.HLE.HOS.Services.Hid
         private readonly NpadJoyAssignmentMode[] _joyAssignmentModes;
         // Controller types switched by the application through the assignment mode, they take precedence over the configured types until the input configuration changes.
         private readonly ControllerType[] _assignmentModeTypes;
+        // Halves of a JoyconPair that are connected, a single Joy-Con merged in Dual mode only has one of them.
+        private readonly bool[] _isDualLeftConnected;
+        private readonly bool[] _isDualRightConnected;
         private VibrationValue _neutralVibrationValue = new()
         {
             AmplitudeLow = 0.01f,
@@ -59,6 +62,11 @@ namespace Ryujinx.HLE.HOS.Services.Hid
             _joyAssignmentModes.AsSpan().Fill(NpadJoyAssignmentMode.Dual);
 
             _assignmentModeTypes = new ControllerType[MaxControllers];
+
+            _isDualLeftConnected = new bool[MaxControllers];
+            _isDualLeftConnected.AsSpan().Fill(true);
+            _isDualRightConnected = new bool[MaxControllers];
+            _isDualRightConnected.AsSpan().Fill(true);
 
             _styleSetUpdateEvents = new KEvent[MaxControllers];
             for (int i = 0; i < _styleSetUpdateEvents.Length; ++i)
@@ -204,6 +212,8 @@ namespace Ryujinx.HLE.HOS.Services.Hid
             }
 
             ControllerType targetType = currentType;
+            bool isDualLeftConnected = true;
+            bool isDualRightConnected = true;
 
             if (assignmentMode == NpadJoyAssignmentMode.Dual)
             {
@@ -211,14 +221,20 @@ namespace Ryujinx.HLE.HOS.Services.Hid
                 if (currentType is ControllerType.JoyconLeft or ControllerType.JoyconRight)
                 {
                     targetType = ControllerType.JoyconPair;
+                    isDualLeftConnected = currentType == ControllerType.JoyconLeft;
+                    isDualRightConnected = currentType == ControllerType.JoyconRight;
                 }
             }
             else if (assignmentMode == NpadJoyAssignmentMode.Single)
             {
-                // Dual → Single: JoyDual → JoyLeft or JoyRight (depending on deviceType)
+                // Dual → Single: JoyDual(left-only) → JoyLeft, JoyDual(right-only) → JoyRight, a full JoyDual depends on deviceType
                 if (currentType == ControllerType.JoyconPair)
                 {
-                    targetType = deviceType == NpadJoyDeviceType.Left ? ControllerType.JoyconLeft : ControllerType.JoyconRight;
+                    bool isLeft = _isDualLeftConnected[(int)player] && _isDualRightConnected[(int)player]
+                        ? deviceType == NpadJoyDeviceType.Left
+                        : _isDualLeftConnected[(int)player];
+
+                    targetType = isLeft ? ControllerType.JoyconLeft : ControllerType.JoyconRight;
                 }
             }
 
@@ -227,12 +243,16 @@ namespace Ryujinx.HLE.HOS.Services.Hid
                 return;
             }
 
-            Logger.Info?.Print(LogClass.Hid, $"SetNpadMode: {player} {currentType} → {targetType}, mode {assignmentMode}");
+            Logger.Info?.Print(LogClass.Hid, $"SetNpadMode: {player} {currentType} → {targetType}, mode {assignmentMode}, dual left {isDualLeftConnected} right {isDualRightConnected}");
 
             // Set before switching so that Remap doesn't revert it back to the configured type.
             _assignmentModeTypes[(int)player] = targetType;
 
             SetupNpad(player, ControllerType.None);
+
+            _isDualLeftConnected[(int)player] = isDualLeftConnected;
+            _isDualRightConnected[(int)player] = isDualRightConnected;
+
             SetupNpad(player, targetType);
         }
 
@@ -252,6 +272,8 @@ namespace Ryujinx.HLE.HOS.Services.Hid
             _configuredTypes = new ControllerType[MaxControllers];
             _disconnectedByApplication.AsSpan().Clear();
             _assignmentModeTypes.AsSpan().Clear();
+            _isDualLeftConnected.AsSpan().Fill(true);
+            _isDualRightConnected.AsSpan().Fill(true);
 
             for (int i = 0; i < configs.Length; ++i)
             {
@@ -434,14 +456,31 @@ namespace Ryujinx.HLE.HOS.Services.Hid
                     break;
                 case ControllerType.JoyconPair:
                     controller.StyleSet           = NpadStyleTag.JoyDual;
-                    controller.SixAxisSensorPropertiesArray |= GetNewlyAssignedMask(SixAxisPropertiesJoyDualLeft) | GetNewlyAssignedMask(SixAxisPropertiesJoyDualRight);
                     controller.JoyAssignmentMode  = _joyAssignmentModes[(int)player] = NpadJoyAssignmentMode.Dual;
-                    controller.DeviceType         = DeviceType.JoyLeft |
-                                                    DeviceType.JoyRight;
-                    controller.SystemProperties  |= NpadSystemProperties.IsAbxyButtonOriented |
-                                                    NpadSystemProperties.IsPlusAvailable      |
-                                                    NpadSystemProperties.IsMinusAvailable;
-                    controller.AppletFooterUiType = _device.System.State.DockedMode ? AppletFooterUiType.JoyDual : AppletFooterUiType.HandheldJoyConLeftJoyConRight;
+                    controller.SystemProperties  |= NpadSystemProperties.IsAbxyButtonOriented;
+
+                    if (_isDualLeftConnected[(int)player])
+                    {
+                        controller.SixAxisSensorPropertiesArray |= GetNewlyAssignedMask(SixAxisPropertiesJoyDualLeft);
+                        controller.DeviceType |= DeviceType.JoyLeft;
+                        controller.SystemProperties |= NpadSystemProperties.IsMinusAvailable;
+                    }
+
+                    if (_isDualRightConnected[(int)player])
+                    {
+                        controller.SixAxisSensorPropertiesArray |= GetNewlyAssignedMask(SixAxisPropertiesJoyDualRight);
+                        controller.DeviceType |= DeviceType.JoyRight;
+                        controller.SystemProperties |= NpadSystemProperties.IsPlusAvailable;
+                    }
+
+                    if (_isDualLeftConnected[(int)player] && _isDualRightConnected[(int)player])
+                    {
+                        controller.AppletFooterUiType = _device.System.State.DockedMode ? AppletFooterUiType.JoyDual : AppletFooterUiType.HandheldJoyConLeftJoyConRight;
+                    }
+                    else
+                    {
+                        controller.AppletFooterUiType = _isDualLeftConnected[(int)player] ? AppletFooterUiType.JoyDualLeftOnly : AppletFooterUiType.JoyDualRightOnly;
+                    }
                     break;
                 case ControllerType.JoyconLeft:
                     controller.StyleSet           = NpadStyleTag.JoyLeft;
@@ -571,8 +610,15 @@ namespace Ryujinx.HLE.HOS.Services.Hid
                     newState.Attributes |= NpadAttribute.IsWired;
                     break;
                 case NpadStyleTag.JoyDual:
-                    newState.Attributes |= NpadAttribute.IsLeftConnected |
-                                           NpadAttribute.IsRightConnected;
+                    if (_isDualLeftConnected[(int)state.PlayerId])
+                    {
+                        newState.Attributes |= NpadAttribute.IsLeftConnected;
+                    }
+
+                    if (_isDualRightConnected[(int)state.PlayerId])
+                    {
+                        newState.Attributes |= NpadAttribute.IsRightConnected;
+                    }
                     break;
                 case NpadStyleTag.JoyLeft:
                     newState.Attributes |= NpadAttribute.IsLeftConnected;
