@@ -660,6 +660,23 @@ namespace Ryujinx.HLE.HOS.Services.Hid
 
         public void UpdateSixAxis(IList<SixAxisInput> states)
         {
+            // Like hardware (and Eden), the six-axis sensors are sampled at 200Hz, so write one sample per elapsed 5ms.
+            // Applications such as Ring Fit Adventure assume this rate, e.g. to detect steps from the leg strap Joy-Con.
+            long nowNs = PerformanceCounter.ElapsedNanoseconds;
+            long elapsedNs = _lastSixAxisUpdateNs == 0 ? SixAxisSamplingIntervalNs : nowNs - _lastSixAxisUpdateNs + _sixAxisSamplingRemainderNs;
+            int sampleCount = (int)Math.Clamp(elapsedNs / SixAxisSamplingIntervalNs, 1, MaxSixAxisSamplesPerUpdate);
+
+            _sixAxisSamplingRemainderNs = Math.Clamp(elapsedNs - sampleCount * SixAxisSamplingIntervalNs, 0, SixAxisSamplingIntervalNs);
+            _lastSixAxisUpdateNs = nowNs;
+
+            for (int sample = 0; sample < sampleCount; sample++)
+            {
+                WriteSixAxisSample(states);
+            }
+        }
+
+        private void WriteSixAxisSample(IList<SixAxisInput> states)
+        {
             Span<bool> updated = stackalloc bool[10];
 
             for (int i = 0; i < states.Count; ++i)
@@ -687,6 +704,13 @@ namespace Ryujinx.HLE.HOS.Services.Hid
                 }
             }
         }
+
+        private const long SixAxisSamplingIntervalNs = 5_000_000;
+        // Bounds the samples written after a stall to the capacity of the six-axis lifos.
+        private const int MaxSixAxisSamplesPerUpdate = 16;
+
+        private long _lastSixAxisUpdateNs;
+        private long _sixAxisSamplingRemainderNs;
 
         private ref RingLifo<SixAxisSensorState> GetSixAxisSensorLifo(ref NpadInternalState npad, bool isRightPair)
         {
@@ -751,6 +775,7 @@ namespace Ryujinx.HLE.HOS.Services.Hid
 
             SixAxisSensorState newState = new()
             {
+                DeltaTime = SixAxisSamplingIntervalNs,
                 Acceleration = accel,
                 AngularVelocity = gyro,
                 Angle = rotation,
@@ -778,6 +803,7 @@ namespace Ryujinx.HLE.HOS.Services.Hid
             {
                 SixAxisSensorState emptyState = new()
                 {
+                    DeltaTime = SixAxisSamplingIntervalNs,
                     Attributes = SixAxisSensorAttribute.IsConnected,
                 };
 
