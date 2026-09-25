@@ -660,6 +660,9 @@ namespace Ryujinx.Input.HLE
             Dispose(true);
         }
 
+        private long _lastRumbleDebugLogMs; // TODO: Temporary rumble debugging aid.
+        private bool _lastRumbleDebugWasActive;
+
         public void UpdateRumble(ConcurrentQueue<(VibrationValue, VibrationValue)> queue)
         {
             if (queue.TryDequeue(out (VibrationValue, VibrationValue) dualVibrationValue))
@@ -710,9 +713,21 @@ namespace Ryujinx.Input.HLE
             rightVibrationValue.AmplitudeLow *= controllerConfig.Rumble.WeakRumble;
             rightVibrationValue.AmplitudeHigh *= controllerConfig.Rumble.StrongRumble;
 
+            bool rumbleResult = true;
+
             if (!controllerConfig.Rumble.UseHDRumble || !gamepad.HDRumble(leftVibrationValue, rightVibrationValue))
             {
-                gamepad.Rumble(low, high, 0xFFFFFFFF);
+                rumbleResult = gamepad.Rumble(low, high, 0xFFFFFFFF);
+            }
+
+            // TODO: Temporary rumble debugging aid.
+            if ((low > 0.02f || high > 0.02f || _lastRumbleDebugWasActive) &&
+                PerformanceCounter.ElapsedMilliseconds - _lastRumbleDebugLogMs >= 200)
+            {
+                _lastRumbleDebugLogMs = PerformanceCounter.ElapsedMilliseconds;
+                _lastRumbleDebugWasActive = low > 0.02f || high > 0.02f;
+
+                Logger.Info?.Print(LogClass.Hid, $"Rumble to device: {controllerConfig.PlayerIndex} gamepad={gamepad.Name} ({gamepad.GetType().Name}) rumbleFeature={(gamepad.Features & GamepadFeaturesFlag.Rumble) != 0} low={low:F2} high={high:F2} result={rumbleResult}");
             }
 
             Logger.Debug?.Print(LogClass.Hid, $"Effect for {controllerConfig.PlayerIndex} " +
