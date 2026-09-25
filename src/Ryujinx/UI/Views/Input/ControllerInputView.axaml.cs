@@ -74,6 +74,8 @@ namespace Ryujinx.Ava.UI.Views.Input
 
         private void CheckBox_IsCheckedChanged(object sender, RoutedEventArgs e)
         {
+            Ryujinx.Common.Logging.Logger.Info?.Print(Ryujinx.Common.Logging.LogClass.UI, $"Input CheckBox changed: isChecked={(sender as CheckBox)?.IsChecked}, isPointerOver={(sender as CheckBox)?.IsPointerOver}"); // TODO: Temporary rumble setting debugging aid.
+
             if (sender is CheckBox { IsPointerOver: true })
             {
                 FlagInputConfigChanged();
