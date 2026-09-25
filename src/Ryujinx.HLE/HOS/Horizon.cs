@@ -172,6 +172,8 @@ namespace Ryujinx.HLE.HOS
             SharedMemoryStorage appletCaptureBufferStorage = new(KernelContext, appletCaptureBufferPageList);
             SharedMemoryStorage hidBusStorage = new(KernelContext, hidBusPageList);
 
+            InitializeIrsSharedMemory(iirsStorage);
+
             HidStorage = hidStorage;
             HidBusStorage = hidBusStorage;
 
@@ -250,6 +252,23 @@ namespace Ryujinx.HLE.HOS
             HostSyncpoint = new NvHostSyncpt(device);
 
             SurfaceFlinger = new SurfaceFlinger(device);
+        }
+
+        private static void InitializeIrsSharedMemory(SharedMemoryStorage storage)
+        {
+            // nn::irsensor::detail::StatusManager starts with one DeviceFormat per npad.
+            // Like Eden, report every IR camera as unconnected (and its internal status as ready) since IR sensors aren't emulated.
+            const int DeviceFormatSize = 0xE30;
+            const uint IrCameraStatusUnconnected = 2;
+            const uint IrCameraInternalStatusReady = 7;
+
+            for (int i = 0; i < Services.Hid.NpadDevices.MaxControllers; i++)
+            {
+                ulong offset = (ulong)(i * DeviceFormatSize);
+
+                storage.GetRef<uint>(offset) = IrCameraStatusUnconnected;
+                storage.GetRef<uint>(offset + 4) = IrCameraInternalStatusReady;
+            }
         }
 
         public void InitializeServices()
