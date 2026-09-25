@@ -76,6 +76,9 @@ namespace Ryujinx.Ava.UI.ViewModels.Input
 
         private void OnConfigPropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs args)
         {
+            // The views flag changes from control events, which can fire before bindings update the config.
+            ParentModel.RefreshModifiedState();
+
             if (args.PropertyName is nameof(Config.UseRainbowLed))
             {
                 if (Config is { UseRainbowLed: true, TurnOffLed: false, EnableLedChanging: true })
