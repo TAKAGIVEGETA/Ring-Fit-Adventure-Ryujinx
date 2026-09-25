@@ -601,8 +601,6 @@ namespace Ryujinx.HLE.HOS.Services.Hid
             return ResultCode.Success;
         }
 
-        private readonly Dictionary<int, bool> _lastAtRestResults = [];
-
         [CommandCmif(82)]
         // IsSixAxisSensorAtRest(nn::hid::SixAxisSensorHandle, nn::applet::AppletResourceUserId) -> bool IsAtRest
         public ResultCode IsSixAxisSensorAtRest(ServiceCtx context)
@@ -621,14 +619,6 @@ namespace Ryujinx.HLE.HOS.Services.Hid
                             context.Device.Hid.Npads.IsSixAxisSensorAtRest(HidUtils.GetIndexFromNpadIdType(npadIdType), isRightDevice);
 
             context.ResponseData.Write(isAtRest);
-
-            // TODO: Temporary Ring-Con debugging aid, logs when the result changes.
-            if (!_lastAtRestResults.TryGetValue(sixAxisSensorHandle, out bool lastIsAtRest) || lastIsAtRest != isAtRest)
-            {
-                _lastAtRestResults[sixAxisSensorHandle] = isAtRest;
-
-                Logger.Info?.Print(LogClass.ServiceHid, $"IsSixAxisSensorAtRest: handle=0x{sixAxisSensorHandle:X}, isAtRest={isAtRest}");
-            }
 
             return ResultCode.Success;
         }
@@ -958,8 +948,6 @@ namespace Ryujinx.HLE.HOS.Services.Hid
 
             NpadJoyHoldType npadJoyHoldType = (NpadJoyHoldType)context.RequestData.ReadUInt64();
 
-            Logger.Info?.Print(LogClass.ServiceHid, $"SetNpadJoyHoldType: {npadJoyHoldType}"); // TODO: Temporary Ring-Con debugging aid.
-
             if (npadJoyHoldType > NpadJoyHoldType.Horizontal)
             {
                 throw new InvalidOperationException($"{nameof(npadJoyHoldType)} contains an invalid value: {npadJoyHoldType}");
@@ -1009,8 +997,6 @@ namespace Ryujinx.HLE.HOS.Services.Hid
             long appletResourceUserId = context.RequestData.ReadInt64();
 #pragma warning restore IDE0059
 
-            Logger.Info?.Print(LogClass.ServiceHid, $"SetNpadJoyAssignmentModeSingleByDefault: npadIdType={npadIdType}"); // TODO: Temporary Ring-Con debugging aid.
-
             if (HidUtils.IsValidNpadIdType(npadIdType))
             {
                 context.Device.Hid.Npads.SetJoyAssignmentMode(HidUtils.GetIndexFromNpadIdType(npadIdType), NpadJoyAssignmentMode.Single);
@@ -1027,8 +1013,6 @@ namespace Ryujinx.HLE.HOS.Services.Hid
             context.RequestData.BaseStream.Position += 4; // Padding
             long appletResourceUserId = context.RequestData.ReadInt64();
             NpadJoyDeviceType npadJoyDeviceType = (NpadJoyDeviceType)context.RequestData.ReadUInt32();
-
-            Logger.Info?.Print(LogClass.ServiceHid, $"SetNpadJoyAssignmentModeSingle: npadIdType={npadIdType}, npadJoyDeviceType={npadJoyDeviceType}"); // TODO: Temporary Ring-Con debugging aid.
 
             if (HidUtils.IsValidNpadIdType(npadIdType))
             {
@@ -1047,8 +1031,6 @@ namespace Ryujinx.HLE.HOS.Services.Hid
 #pragma warning disable IDE0059 // Remove unnecessary value assignment
             long appletResourceUserId = context.RequestData.ReadInt64();
 #pragma warning restore IDE0059
-
-            Logger.Info?.Print(LogClass.ServiceHid, $"SetNpadJoyAssignmentModeDual: npadIdType={npadIdType}"); // TODO: Temporary Ring-Con debugging aid.
 
             if (HidUtils.IsValidNpadIdType(npadIdType))
             {
@@ -1172,8 +1154,6 @@ namespace Ryujinx.HLE.HOS.Services.Hid
             NpadJoyDeviceType npadJoyDeviceType = (NpadJoyDeviceType)context.RequestData.ReadInt32();
             context.RequestData.BaseStream.Position += 4; // Padding
             long appletResourceUserId = context.RequestData.ReadInt64();
-
-            Logger.Info?.Print(LogClass.ServiceHid, $"SetNpadJoyAssignmentModeSingleWithDestination: npadIdType={npadIdType}, npadJoyDeviceType={npadJoyDeviceType}"); // TODO: Temporary Ring-Con debugging aid.
 
             if (HidUtils.IsValidNpadIdType(npadIdType))
             {

@@ -152,8 +152,6 @@ namespace Ryujinx.HLE.HOS.Services
                     _parameters[0] = context;
                     
                     result = (ResultCode)processRequest.Invoke(service, _parameters);
-
-                    TraceHidCall(service, processRequest.Name, result);
                 }
                 else
                 {
@@ -185,31 +183,6 @@ namespace Ryujinx.HLE.HOS.Services
 
                 throw new ServiceNotImplementedException(service, context, dbgMessage);
             }
-        }
-
-        // TODO: Temporary Ring-Con debugging aid, logs every hid/hidbus call (except noisy ones) and every failing call.
-        private static readonly HashSet<string> _noisyHidCalls = ["GetGyroscopeZeroDriftMode", "IsSixAxisSensorAtRest", "SendVibrationValues", "SendVibrationValue", "GetActualVibrationValue"];
-
-        private static void TraceHidCall(IpcService service, string name, ResultCode result)
-        {
-            string serviceName = service.GetType().Name;
-
-            if (result != 0)
-            {
-                Logger.Warning?.Print(LogClass.KernelIpc, $"{serviceName}: {name} returned {result} (0x{(int)result:X})");
-            }
-
-            if (serviceName is not ("IHidServer" or "IHidbusServer" or "IAppletResource" or "IActiveApplicationDeviceList"))
-            {
-                return;
-            }
-
-            if (_noisyHidCalls.Contains(name))
-            {
-                return;
-            }
-
-            Logger.Info?.Print(LogClass.KernelIpc, $"Call: {serviceName}.{name} -> {result}");
         }
 
         public void CallTipcMethod(ServiceCtx context)
