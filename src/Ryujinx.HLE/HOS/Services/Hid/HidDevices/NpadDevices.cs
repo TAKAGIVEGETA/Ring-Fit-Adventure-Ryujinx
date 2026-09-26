@@ -662,16 +662,28 @@ namespace Ryujinx.HLE.HOS.Services.Hid
         {
             // Like hardware (and Eden), the six-axis sensors are sampled at 200Hz, so write one sample per elapsed 5ms.
             // Applications such as Ring Fit Adventure assume this rate, e.g. to detect steps from the leg strap Joy-Con.
+            // Input updates run far more often than that, so most of them must not write any sample.
             long nowNs = PerformanceCounter.ElapsedNanoseconds;
-            long elapsedNs = _lastSixAxisUpdateNs == 0 ? SixAxisSamplingIntervalNs : nowNs - _lastSixAxisUpdateNs + _sixAxisSamplingRemainderNs;
-            int sampleCount = (int)Math.Clamp(elapsedNs / SixAxisSamplingIntervalNs, 1, MaxSixAxisSamplesPerUpdate);
 
-            _sixAxisSamplingRemainderNs = Math.Clamp(elapsedNs - sampleCount * SixAxisSamplingIntervalNs, 0, SixAxisSamplingIntervalNs);
-            _lastSixAxisUpdateNs = nowNs;
+            if (_nextSixAxisSampleNs == 0)
+            {
+                _nextSixAxisSampleNs = nowNs;
+            }
 
-            for (int sample = 0; sample < sampleCount; sample++)
+            int sampleCount = 0;
+
+            while (nowNs >= _nextSixAxisSampleNs && sampleCount < MaxSixAxisSamplesPerUpdate)
             {
                 WriteSixAxisSample(states);
+
+                _nextSixAxisSampleNs += SixAxisSamplingIntervalNs;
+                sampleCount++;
+            }
+
+            // After a stall, drop the samples that don't fit in the lifos rather than catching up on them later.
+            if (nowNs >= _nextSixAxisSampleNs)
+            {
+                _nextSixAxisSampleNs = nowNs + SixAxisSamplingIntervalNs;
             }
         }
 
@@ -709,8 +721,7 @@ namespace Ryujinx.HLE.HOS.Services.Hid
         // Bounds the samples written after a stall to the capacity of the six-axis lifos.
         private const int MaxSixAxisSamplesPerUpdate = 16;
 
-        private long _lastSixAxisUpdateNs;
-        private long _sixAxisSamplingRemainderNs;
+        private long _nextSixAxisSampleNs;
 
         private ref RingLifo<SixAxisSensorState> GetSixAxisSensorLifo(ref NpadInternalState npad, bool isRightPair)
         {
