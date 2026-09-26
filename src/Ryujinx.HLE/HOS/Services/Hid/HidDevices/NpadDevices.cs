@@ -685,32 +685,7 @@ namespace Ryujinx.HLE.HOS.Services.Hid
             {
                 _nextSixAxisSampleNs = nowNs + SixAxisSamplingIntervalNs;
             }
-
-            // TODO: Temporary six-axis debugging aid, logs the input update and six-axis sample rates.
-            if (_debugSixAxisLogNs == 0)
-            {
-                _debugSixAxisLogNs = nowNs;
-            }
-
-            _debugSixAxisUpdateCount++;
-            _debugSixAxisSampleCount += sampleCount;
-
-            if (nowNs - _debugSixAxisLogNs >= 5_000_000_000)
-            {
-                double seconds = (nowNs - _debugSixAxisLogNs) / 1e9;
-
-                Logger.Info?.Print(LogClass.Hid, $"Six-axis sampling: {_debugSixAxisSampleCount / seconds:F1} samples/s, {_debugSixAxisUpdateCount / seconds:F0} input updates/s");
-
-                _debugSixAxisLogNs = nowNs;
-                _debugSixAxisUpdateCount = 0;
-                _debugSixAxisSampleCount = 0;
-            }
         }
-
-        // TODO: Temporary six-axis debugging aid.
-        private long _debugSixAxisLogNs;
-        private long _debugSixAxisUpdateCount;
-        private long _debugSixAxisSampleCount;
 
         private void WriteSixAxisSample(IList<SixAxisInput> states)
         {

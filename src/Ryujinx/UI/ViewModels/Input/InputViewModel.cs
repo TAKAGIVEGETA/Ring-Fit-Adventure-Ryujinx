@@ -658,8 +658,6 @@ namespace Ryujinx.Ava.UI.ViewModels.Input
         {
             Config = inputConfig ?? GetDisplayedInputConfig(GetPersistedInputConfig());
 
-            Logger.Info?.Print(LogClass.UI, $"Input LoadConfiguration: player={_playerId}, explicit={inputConfig != null}, type={Config?.ControllerType}, id={Config?.Id}, rumble={(Config as StandardControllerInputConfig)?.Rumble?.EnableRumble}\n{Environment.StackTrace}"); // TODO: Temporary rumble setting debugging aid.
-
             if (reloadPlayerInputDevices)
             {
                 PlayerInputAssignment persistedAssignment = GetPersistedPlayerInputAssignment();
@@ -1409,8 +1407,6 @@ namespace Ryujinx.Ava.UI.ViewModels.Input
             }
 
             IsModified = HasUnsavedChanges();
-
-            Logger.Info?.Print(LogClass.UI, $"Input RefreshModifiedState: player={PlayerId}, isModified={IsModified}, rumble={(ConfigViewModel as ControllerInputViewModel)?.Config.EnableRumble}"); // TODO: Temporary rumble setting debugging aid.
         }
 
         private bool HasUnsavedChanges()
@@ -2121,7 +2117,6 @@ namespace Ryujinx.Ava.UI.ViewModels.Input
 
         public void Save()
         {
-            Logger.Info?.Print(LogClass.UI, $"Input Save: player={PlayerId}, isModified={IsModified}, device={Device}, controllerType={GetSelectedControllerType()}, rumble={(ConfigViewModel as ControllerInputViewModel)?.Config.EnableRumble}"); // TODO: Temporary rumble setting debugging aid.
 
             if (!IsModified)
             {
@@ -2162,8 +2157,6 @@ namespace Ryujinx.Ava.UI.ViewModels.Input
                     IsModified = true;
                     return;
                 }
-
-                Logger.Info?.Print(LogClass.UI, $"Input Save: writing player={PlayerId}, type={config.ControllerType}, id={config.Id}, rumble={(config as StandardControllerInputConfig)?.Rumble?.EnableRumble}"); // TODO: Temporary rumble setting debugging aid.
 
                 int i = newConfig.FindIndex(x => x.PlayerIndex == PlayerId);
                 if (i == -1)

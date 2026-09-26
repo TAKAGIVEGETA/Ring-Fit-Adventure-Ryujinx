@@ -2,7 +2,6 @@ using Ryujinx.Common;
 using Ryujinx.Common.Configuration.Hid;
 using Ryujinx.Common.Configuration.Hid.Controller;
 using Ryujinx.Common.Configuration.Hid.Keyboard;
-using Ryujinx.Common.Logging;
 using Ryujinx.HLE.HOS.Services.Hid;
 using Ryujinx.HLE.HOS.Services.Hid.HidBus;
 using System;
@@ -427,8 +426,6 @@ namespace Ryujinx.Input.HLE
                         SixAxisInput altMotionState = isJoyconPair ? controller.GetHLEMotionState(true) : default;
 
                         motionState = (controller.GetHLEMotionState(), altMotionState);
-
-                        TraceMotionStaleness(playerIndex, motionState.Item1); // TODO: Temporary motion debugging aid.
                     }
                     else
                     {
@@ -510,48 +507,6 @@ namespace Ryujinx.Input.HLE
                 }
 
                 _device.TamperMachine.UpdateInput(_hleInputStates);
-            }
-        }
-
-        // TODO: Temporary motion debugging aid, logs when a player's motion data stops changing for a while.
-        private readonly Vector3[] _lastDebugAccelerometer = new Vector3[MaxControllers];
-        private readonly Vector3[] _lastDebugGyroscope = new Vector3[MaxControllers];
-        private readonly long[] _lastDebugMotionChangeMs = new long[MaxControllers];
-        private readonly long[] _lastDebugMotionSummaryMs = new long[MaxControllers];
-        private readonly int[] _debugMotionStaleCount = new int[MaxControllers];
-
-        private void TraceMotionStaleness(PlayerIndex playerIndex, SixAxisInput motion)
-        {
-            int index = (int)playerIndex;
-
-            if ((uint)index >= MaxControllers)
-            {
-                return;
-            }
-
-            long now = PerformanceCounter.ElapsedMilliseconds;
-
-            if (motion.Accelerometer != _lastDebugAccelerometer[index] || motion.Gyroscope != _lastDebugGyroscope[index])
-            {
-                long staleMs = now - _lastDebugMotionChangeMs[index];
-
-                if (staleMs >= 100 && _lastDebugMotionChangeMs[index] != 0)
-                {
-                    _debugMotionStaleCount[index]++;
-
-                    Logger.Info?.Print(LogClass.Hid, $"Motion stale: {playerIndex} unchanged for {staleMs}ms (accel={_lastDebugAccelerometer[index]}, gyro={_lastDebugGyroscope[index]})");
-                }
-
-                _lastDebugAccelerometer[index] = motion.Accelerometer;
-                _lastDebugGyroscope[index] = motion.Gyroscope;
-                _lastDebugMotionChangeMs[index] = now;
-            }
-
-            if (now - _lastDebugMotionSummaryMs[index] >= 5000)
-            {
-                _lastDebugMotionSummaryMs[index] = now;
-
-                Logger.Info?.Print(LogClass.Hid, $"Motion summary: {playerIndex} accel={motion.Accelerometer} |a|={motion.Accelerometer.Length():F2} gyro={motion.Gyroscope} staleEvents={_debugMotionStaleCount[index]}");
             }
         }
 
