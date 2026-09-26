@@ -26,10 +26,5 @@
 	<string>11.0</string>
 	<key>UIPrerenderedIcon</key>
 	<true/>
-	<key>LSEnvironment</key>
-	<dict>
-		<key>DOTNET_DefaultStackSize</key>
-		<string>200000</string>
-	</dict>
 </dict>
 </plist>
