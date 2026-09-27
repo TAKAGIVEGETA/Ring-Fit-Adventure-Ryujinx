@@ -892,21 +892,10 @@ namespace Ryujinx.HLE.HOS.Services.Hid
                 {
                     currentQueue.Enqueue((leftVibrationValue, rightVibrationValue));
 
-                    // TODO: Temporary rumble debugging aid.
-                    if (Math.Max(Math.Max(leftVibrationValue.AmplitudeLow, leftVibrationValue.AmplitudeHigh), Math.Max(rightVibrationValue.AmplitudeLow, rightVibrationValue.AmplitudeHigh)) > 0.02f &&
-                        PerformanceCounter.ElapsedMilliseconds - _lastRumbleDebugLogMs[(int)index % MaxControllers] >= 200)
-                    {
-                        _lastRumbleDebugLogMs[(int)index % MaxControllers] = PerformanceCounter.ElapsedMilliseconds;
-
-                        Logger.Info?.Print(LogClass.Hid, $"Rumble from game: {index} L=({leftVibrationValue.AmplitudeLow:F2}@{leftVibrationValue.FrequencyLow:F0}, {leftVibrationValue.AmplitudeHigh:F2}@{leftVibrationValue.FrequencyHigh:F0}) R=({rightVibrationValue.AmplitudeLow:F2}@{rightVibrationValue.FrequencyLow:F0}, {rightVibrationValue.AmplitudeHigh:F2}@{rightVibrationValue.FrequencyHigh:F0}) queue={currentQueue.Count}");
-                    }
-
                     LastVibrationValues[index] = (leftVibrationValue, rightVibrationValue);
                 }
             }
         }
-
-        private readonly long[] _lastRumbleDebugLogMs = new long[MaxControllers]; // TODO: Temporary rumble debugging aid.
 
         public VibrationValue GetLastVibrationValue(PlayerIndex index, byte position)
         {
