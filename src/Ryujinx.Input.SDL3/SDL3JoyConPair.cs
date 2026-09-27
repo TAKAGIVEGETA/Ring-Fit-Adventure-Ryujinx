@@ -71,6 +71,14 @@ namespace Ryujinx.Input.SDL3
             return false;
         }
 
+        public bool RumbleSides(float leftLow, float leftHigh, float rightLow, float rightHigh, uint durationMs)
+        {
+            bool leftResult = left.Rumble(leftLow, leftHigh, durationMs);
+            bool rightResult = right.Rumble(rightLow, rightHigh, durationMs);
+
+            return leftResult && rightResult;
+        }
+
         public bool Rumble(float lowFrequency, float highFrequency, uint durationMs)
         {
             if (lowFrequency != 0)
