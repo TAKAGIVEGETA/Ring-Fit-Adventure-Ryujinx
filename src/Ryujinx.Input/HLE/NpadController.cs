@@ -665,19 +665,34 @@ namespace Ryujinx.Input.HLE
 
         public void UpdateRumble(ConcurrentQueue<(VibrationValue, VibrationValue)> queue)
         {
-            if (queue.TryDequeue(out (VibrationValue, VibrationValue) dualVibrationValue))
+            bool hasVibrationValue = queue.TryDequeue(out (VibrationValue, VibrationValue) dualVibrationValue);
+
+            IGamepad gamepad;
+            StandardControllerInputConfig rumbleControllerConfig;
+
+            if (_controllerConfig is StandardControllerInputConfig dynamicControllerConfig &&
+                _playerInputAssignment?.EnableDynamicInputSwap == true &&
+                dynamicControllerConfig.Rumble?.EnableRumble == true)
             {
-                if (_controllerConfig is StandardControllerInputConfig dynamicControllerConfig &&
-                    _playerInputAssignment?.EnableDynamicInputSwap == true &&
-                    dynamicControllerConfig.Rumble?.EnableRumble == true)
-                {
-                    ApplyRumble(_controllerGamepad ?? _assignedControllerGamepads.FirstOrDefault(), dynamicControllerConfig, dualVibrationValue);
-                }
-                else if (_config is StandardControllerInputConfig controllerConfig && controllerConfig.Rumble?.EnableRumble == true)
-                {
-                    ApplyRumble(_gamepad, controllerConfig, dualVibrationValue);
-                }
+                gamepad = _controllerGamepad ?? _assignedControllerGamepads.FirstOrDefault();
+                rumbleControllerConfig = dynamicControllerConfig;
             }
+            else if (_config is StandardControllerInputConfig controllerConfig && controllerConfig.Rumble?.EnableRumble == true)
+            {
+                gamepad = _gamepad;
+                rumbleControllerConfig = controllerConfig;
+            }
+            else
+            {
+                return;
+            }
+
+            if (hasVibrationValue)
+            {
+                ApplyRumble(gamepad, rumbleControllerConfig, dualVibrationValue);
+            }
+
+            gamepad?.UpdateRumble();
         }
 
         public bool HasAssignedControllerId(string id)
@@ -695,22 +710,6 @@ namespace Ryujinx.Input.HLE
             return Id == id;
         }
 
-        private static bool TryGetSingleJoyConSide(IGamepad gamepad, out bool isLeft)
-        {
-            // Matches the SDL names "Nintendo Switch Joy-Con (L)" and "Nintendo Switch Joy-Con (R)", not the combined pair.
-            isLeft = gamepad.Name?.EndsWith("Joy-Con (L)", StringComparison.Ordinal) == true;
-
-            return isLeft || gamepad.Name?.EndsWith("Joy-Con (R)", StringComparison.Ordinal) == true;
-        }
-
-        private static float JoyConRumbleAmplitude(float amplitude, float multiplier)
-        {
-            // Same curve as Eden's SDL driver, which makes weak vibrations noticeable on the Joy-Con actuators.
-            amplitude = Math.Clamp(amplitude * multiplier, 0f, 1f);
-
-            return (amplitude + MathF.Pow(amplitude, 0.35f)) * 0.5f;
-        }
-
         private void ApplyRumble(IGamepad gamepad, StandardControllerInputConfig controllerConfig, (VibrationValue, VibrationValue) dualVibrationValue)
         {
             if (gamepad == null)
@@ -724,19 +723,6 @@ namespace Ryujinx.Input.HLE
             float low = Math.Min(1f, (float)((rightVibrationValue.AmplitudeLow * 0.85 + rightVibrationValue.AmplitudeHigh * 0.15) * controllerConfig.Rumble.StrongRumble));
             float high = Math.Min(1f, (float)((leftVibrationValue.AmplitudeLow * 0.15 + leftVibrationValue.AmplitudeHigh * 0.85) * controllerConfig.Rumble.WeakRumble));
 
-            // Like Eden, Joy-Cons are driven with the vibration of their own side, boosted by an exponential curve.
-            float leftLow = JoyConRumbleAmplitude(leftVibrationValue.AmplitudeLow, controllerConfig.Rumble.StrongRumble);
-            float leftHigh = JoyConRumbleAmplitude(leftVibrationValue.AmplitudeHigh, controllerConfig.Rumble.WeakRumble);
-            float rightLow = JoyConRumbleAmplitude(rightVibrationValue.AmplitudeLow, controllerConfig.Rumble.StrongRumble);
-            float rightHigh = JoyConRumbleAmplitude(rightVibrationValue.AmplitudeHigh, controllerConfig.Rumble.WeakRumble);
-
-            // A single Joy-Con has one actuator driven by both rumble bands, only use the vibration of its own side.
-            if (TryGetSingleJoyConSide(gamepad, out bool isLeft))
-            {
-                low = isLeft ? leftLow : rightLow;
-                high = isLeft ? leftHigh : rightHigh;
-            }
-
             leftVibrationValue.AmplitudeLow *= controllerConfig.Rumble.WeakRumble;
             leftVibrationValue.AmplitudeHigh *= controllerConfig.Rumble.StrongRumble;
             rightVibrationValue.AmplitudeLow *= controllerConfig.Rumble.WeakRumble;
@@ -746,7 +732,8 @@ namespace Ryujinx.Input.HLE
 
             if (!controllerConfig.Rumble.UseHDRumble || !gamepad.HDRumble(leftVibrationValue, rightVibrationValue))
             {
-                if (!gamepad.RumbleSides(leftLow, leftHigh, rightLow, rightHigh, 0xFFFFFFFF))
+                // Like Eden and hardware, each Joy-Con (single or paired) is driven with the vibration of its own side.
+                if (!gamepad.JoyConRumble(leftVibrationValue, rightVibrationValue))
                 {
                     rumbleResult = gamepad.Rumble(low, high, 0xFFFFFFFF);
                 }
@@ -759,7 +746,7 @@ namespace Ryujinx.Input.HLE
                 _lastRumbleDebugLogMs = PerformanceCounter.ElapsedMilliseconds;
                 _lastRumbleDebugWasActive = low > 0.02f || high > 0.02f;
 
-                Logger.Info?.Print(LogClass.Hid, $"Rumble to device: {controllerConfig.PlayerIndex} gamepad={gamepad.Name} ({gamepad.GetType().Name}) rumbleFeature={(gamepad.Features & GamepadFeaturesFlag.Rumble) != 0} low={low:F2} high={high:F2} sides=L({leftLow:F2},{leftHigh:F2}) R({rightLow:F2},{rightHigh:F2}) result={rumbleResult}");
+                Logger.Info?.Print(LogClass.Hid, $"Rumble to device: {controllerConfig.PlayerIndex} gamepad={gamepad.Name} ({gamepad.GetType().Name}) rumbleFeature={(gamepad.Features & GamepadFeaturesFlag.Rumble) != 0} low={low:F2} high={high:F2} sides=L({leftVibrationValue.AmplitudeLow:F2}@{leftVibrationValue.FrequencyLow:F0},{leftVibrationValue.AmplitudeHigh:F2}@{leftVibrationValue.FrequencyHigh:F0}) R({rightVibrationValue.AmplitudeLow:F2}@{rightVibrationValue.FrequencyLow:F0},{rightVibrationValue.AmplitudeHigh:F2}@{rightVibrationValue.FrequencyHigh:F0}) result={rumbleResult}");
             }
 
             Logger.Debug?.Print(LogClass.Hid, $"Effect for {controllerConfig.PlayerIndex} " +

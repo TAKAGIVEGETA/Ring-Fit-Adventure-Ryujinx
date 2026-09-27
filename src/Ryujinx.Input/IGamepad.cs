@@ -91,10 +91,17 @@ namespace Ryujinx.Input
         bool Rumble(float lowFrequency, float highFrequency, uint durationMs);
 
         /// <summary>
-        /// Starts a rumble effect on each side of a gamepad made of two halves, such as a Joy-Con pair.
+        /// Starts a vibration on Joy-Cons, each one driven with the vibration of its own side like on hardware.
         /// </summary>
-        /// <returns>False if the gamepad isn't made of two halves</returns>
-        bool RumbleSides(float leftLow, float leftHigh, float rightLow, float rightHigh, uint durationMs) => false;
+        /// <param name="left">The vibration data for the left side</param>
+        /// <param name="right">The vibration data for the right side</param>
+        /// <returns>False if the gamepad isn't made of Joy-Cons</returns>
+        bool JoyConRumble(VibrationValue left, VibrationValue right) => false;
+
+        /// <summary>
+        /// Sends the rumble started by <see cref="JoyConRumble"/> that is rate limited or needs to be refreshed, called on every input update.
+        /// </summary>
+        void UpdateRumble() { }
 
         /// <summary>
         /// Get a snaphost of the state of the gamepad that is remapped with the information from the <see cref="InputConfig"/> set via <see cref="SetConfiguration(InputConfig)"/>.

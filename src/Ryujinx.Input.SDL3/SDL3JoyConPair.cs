@@ -71,12 +71,18 @@ namespace Ryujinx.Input.SDL3
             return false;
         }
 
-        public bool RumbleSides(float leftLow, float leftHigh, float rightLow, float rightHigh, uint durationMs)
+        public bool JoyConRumble(VibrationValue leftValue, VibrationValue rightValue)
         {
-            bool leftResult = left.Rumble(leftLow, leftHigh, durationMs);
-            bool rightResult = right.Rumble(rightLow, rightHigh, durationMs);
+            bool leftResult = left.JoyConRumble(leftValue, rightValue);
+            bool rightResult = right.JoyConRumble(leftValue, rightValue);
 
             return leftResult && rightResult;
+        }
+
+        public void UpdateRumble()
+        {
+            left.UpdateRumble();
+            right.UpdateRumble();
         }
 
         public bool Rumble(float lowFrequency, float highFrequency, uint durationMs)

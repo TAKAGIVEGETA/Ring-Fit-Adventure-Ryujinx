@@ -30,9 +30,10 @@ namespace Ryujinx.HLE.HOS.Services.Hid
         // Halves of a JoyconPair that are connected, a single Joy-Con merged in Dual mode only has one of them.
         private readonly bool[] _isDualLeftConnected;
         private readonly bool[] _isDualRightConnected;
+        // Like Eden's default vibration value, no vibration.
         private VibrationValue _neutralVibrationValue = new()
         {
-            AmplitudeLow = 0.01f,
+            AmplitudeLow = 0f,
             FrequencyLow = 160f,
             AmplitudeHigh = 0f,
             FrequencyHigh = 320f,
